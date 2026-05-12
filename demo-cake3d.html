@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>3D Cake Designer — BIG T</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--black:#050508;--white:#f0ede8;--acid:#c8ff00;--orange:#ff5c1a;--dim:#111118;--dim2:#1a1a22;--muted:rgba(255,255,255,0.85);--border:rgba(200,255,0,0.12);--border2:rgba(240,237,232,0.08);}
+html,body{height:100%;background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;overflow:hidden;cursor:none;}
+.cursor{position:fixed;width:10px;height:10px;background:var(--acid);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;}
+.cursor-ring{position:fixed;width:38px;height:38px;border:1px solid var(--acid);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all 0.1s ease-out;opacity:0.45;}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 36px;border-bottom:1px solid var(--border);backdrop-filter:blur(16px);background:rgba(5,5,8,0.88);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:0.18em;color:var(--acid);}
+.nav-back{font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.2em;color:var(--muted);text-decoration:none;text-transform:uppercase;transition:color 0.3s;}
+.nav-back:hover{color:var(--acid);}
+.app{display:grid;grid-template-columns:220px 1fr 260px;height:100vh;padding-top:51px;}
+.left-panel{background:var(--dim);border-right:1px solid var(--border2);overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:12px;}
+.panel-hd{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:0.32em;color:var(--acid);text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;}
+.panel-hd::before{content:'';display:block;width:12px;height:1px;background:var(--acid);}
+.topping-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.topping-item{background:var(--dim2);border:1px solid var(--border2);padding:8px;text-align:center;cursor:grab;transition:all 0.25s;user-select:none;}
+.topping-item:hover{border-color:var(--acid);background:rgba(200,255,0,0.05);transform:scale(1.04);}
+.topping-item:active{cursor:grabbing;}
+.topping-canvas{display:block;width:56px;height:56px;margin:0 auto 4px;pointer-events:none;}
+.topping-name{font-family:'Space Mono',monospace;font-size:0.42rem;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;}
+.topping-price{font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--acid);margin-top:2px;}
+.hint-box{background:rgba(200,255,0,0.04);border:1px solid var(--border);padding:10px;margin-top:4px;}
+.hint-text{font-family:'Space Mono',monospace;font-size:0.48rem;letter-spacing:0.1em;color:var(--muted);line-height:1.8;}
+.hint-text b{color:var(--acid);}
+.viewport{position:relative;background:#0a0a12;overflow:hidden;}
+#threeCanvas{display:block;width:100%;height:100%;}
+.vp-controls{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;}
+.vp-btn{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:0.15em;color:var(--black);background:var(--acid);border:none;padding:8px 16px;cursor:none;transition:all 0.2s;white-space:nowrap;}
+.vp-btn:hover{background:var(--orange);}
+.vp-btn.outline{background:transparent;border:1px solid var(--border2);color:var(--muted);}
+.vp-btn.outline:hover{border-color:var(--acid);color:var(--acid);background:transparent;}
+.vp-hint{position:absolute;top:16px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:0.2em;color:rgba(200,255,0,0.45);background:rgba(5,5,8,0.7);padding:5px 14px;white-space:nowrap;}
+.drop-zone-indicator{position:absolute;inset:0;border:3px dashed var(--acid);opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:5;}
+.drop-zone-indicator.active{opacity:0.28;}
+#dropIndicator{position:absolute;width:44px;height:44px;border:2px solid var(--acid);border-radius:50%;pointer-events:none;z-index:20;display:none;transform:translate(-50%,-50%);box-shadow:0 0 18px rgba(200,255,0,0.55);}
+.right-panel{background:var(--black);border-left:1px solid var(--border2);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.ctrl-section{display:flex;flex-direction:column;gap:8px;}
+.ctrl-label{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:0.32em;color:var(--acid);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.ctrl-label::before{content:'';display:block;width:12px;height:1px;background:var(--acid);}
+.tier-row{display:flex;gap:4px;}
+.tier-btn{flex:1;font-family:'Space Mono',monospace;font-size:0.55rem;padding:9px 0;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:none;transition:all 0.2s;text-align:center;}
+.tier-btn.active,.tier-btn:hover{border-color:var(--acid);color:var(--acid);background:rgba(200,255,0,0.06);}
+.flavor-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.flavor-btn{font-family:'DM Sans',sans-serif;font-size:0.75rem;padding:9px 10px;border:1px solid var(--border2);background:var(--dim);color:var(--muted);cursor:none;transition:all 0.2s;display:flex;align-items:center;gap:7px;}
+.flavor-btn.active,.flavor-btn:hover{border-color:var(--acid);color:var(--white);}
+.flavor-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.swatch-row{display:flex;gap:7px;flex-wrap:wrap;}
+.swatch{width:32px;height:32px;border:2px solid transparent;cursor:none;transition:transform 0.2s,border-color 0.2s;}
+.swatch:hover,.swatch.active{transform:scale(1.2);border-color:var(--acid);}
+.frost-row{display:flex;gap:4px;}
+.frost-btn{flex:1;font-family:'Space Mono',monospace;font-size:0.48rem;padding:8px 4px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:none;transition:all 0.2s;text-align:center;}
+.frost-btn.active,.frost-btn:hover{border-color:var(--acid);color:var(--acid);background:rgba(200,255,0,0.05);}
+.topping-count{font-family:'Space Mono',monospace;font-size:0.52rem;letter-spacing:0.15em;color:var(--muted);background:var(--dim);padding:8px 12px;border:1px solid var(--border2);display:flex;justify-content:space-between;}
+.topping-count b{color:var(--acid);}
+.price-display{background:var(--dim2);border:1px solid var(--border);padding:16px;}
+.price-label{font-family:'Space Mono',monospace;font-size:0.52rem;letter-spacing:0.25em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.price-amount{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--acid);line-height:1;}
+.order-btn{width:100%;font-family:'Space Mono',monospace;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--black);background:var(--acid);padding:14px 0;border:none;cursor:none;position:relative;overflow:hidden;transition:transform 0.2s;}
+.order-btn::after{content:'';position:absolute;inset:0;background:var(--orange);transform:translateX(-101%);transition:transform 0.3s cubic-bezier(0.76,0,0.24,1);}
+.order-btn:hover::after{transform:translateX(0);}
+.order-btn:hover{transform:skewX(-2deg);}
+.order-btn span{position:relative;z-index:1;}
+.clear-btn{width:100%;font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);background:transparent;padding:10px 0;border:1px solid var(--border2);cursor:none;transition:all 0.25s;}
+.clear-btn:hover{border-color:var(--orange);color:var(--orange);}
+.toast{position:fixed;bottom:36px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--acid);color:var(--black);font-family:'Space Mono',monospace;font-size:0.62rem;letter-spacing:0.15em;padding:12px 28px;z-index:999;transition:transform 0.4s cubic-bezier(0.22,1,0.36,1);opacity:0;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="toast" id="toast"></div>
+<nav>
+  <div class="nav-logo">BIG T / CAKE 3D</div>
+  <a href="index.php" class="nav-back">← Back</a>
+</nav>
+<div class="app">
+  <div class="left-panel">
+    <div class="panel-hd">Drag Toppings</div>
+    <div class="topping-grid" id="toppingPalette"></div>
+    <div class="hint-box">
+      <div class="hint-text">
+        <b>Drag</b> onto the cake<br>
+        <b>Click</b> topping to remove<br>
+        <b>Scroll</b> to zoom<br>
+        <b>Drag</b> to rotate<br>
+        <b>Right-drag</b> to pan
+      </div>
+    </div>
+  </div>
+  <div class="viewport" id="viewport">
+    <canvas id="threeCanvas"></canvas>
+    <div class="drop-zone-indicator" id="dropZone"></div>
+    <div id="dropIndicator"></div>
+    <div class="vp-hint">🎂 Drop toppings ON the cake • Click topping to remove</div>
+    <div class="vp-controls">
+      <button class="vp-btn outline" id="resetCamBtn">Reset View</button>
+      <button class="vp-btn" id="autoRotBtn">Auto Rotate: ON</button>
+      <button class="vp-btn outline" id="snapBtn">📸 Snapshot</button>
+    </div>
+  </div>
+  <div class="right-panel">
+    <div class="ctrl-section">
+      <div class="ctrl-label">Tiers</div>
+      <div class="tier-row">
+        <button class="tier-btn active" data-t="1">1</button>
+        <button class="tier-btn" data-t="2">2</button>
+        <button class="tier-btn" data-t="3">3</button>
+        <button class="tier-btn" data-t="4">4</button>
+      </div>
+    </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">Flavor</div>
+      <div class="flavor-grid" id="flavorGrid"></div>
+    </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">Frosting Color</div>
+      <div class="swatch-row" id="swatchRow"></div>
+    </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">Frosting Style</div>
+      <div class="frost-row">
+        <button class="frost-btn active" data-f="smooth">Smooth</button>
+        <button class="frost-btn" data-f="ruffle">Ruffle</button>
+        <button class="frost-btn" data-f="drip">Drip</button>
+        <button class="frost-btn" data-f="naked">Naked</button>
+      </div>
+    </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">Toppings Added</div>
+      <div class="topping-count"><span>Items on cake</span><b id="toppingCountNum">0</b></div>
+    </div>
+    <div class="price-display">
+      <div class="price-label">Total Estimate</div>
+      <div class="price-amount" id="priceAmt">₱800</div>
+    </div>
+    <button class="order-btn" id="orderBtn"><span>Add to Order →</span></button>
+    <button class="clear-btn" id="clearToppingsBtn">Clear All Toppings</button>
+  </div>
+</div>
+<script>
+// ── CURSOR
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function ac(){cur.style.left=mx+'px';cur.style.top=my+'px';rx+=(mx-rx)*0.1;ry+=(my-ry)*0.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(ac);})();
+
+function mkMat(color,rough=0.5,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});}
+
+const TOPPINGS=[
+  {id:'strawberry',name:'Strawberry',price:50,
+    build(){
+      const g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.SphereGeometry(0.18,16,14),mkMat(0xe8243a,0.5));
+      body.scale.set(0.88,1.15,0.88);g.add(body);
+      for(let i=0;i<9;i++){
+        const a=(i/9)*Math.PI*2,el=(Math.random()-.5)*.9;
+        const s=new THREE.Mesh(new THREE.SphereGeometry(0.016,5,5),mkMat(0xf8f0a0,0.5));
+        s.position.set(Math.cos(a)*.16*Math.cos(el),Math.sin(el)*.2,Math.sin(a)*.16*Math.cos(el));
+        g.add(s);
+      }
+      const leaf=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.12,5),mkMat(0x2d8c3a,0.7));
+      leaf.position.y=0.23;leaf.rotation.z=0.3;g.add(leaf);
+      return g;
+    }
+  },
+  {id:'blueberry',name:'Blueberry',price:60,
+    build(){
+      const g=new THREE.Group();
+      const cols=[0x3a2070,0x4a2d8a,0x2a1050,0x5535a0,0x3d2880];
+      [[0,0,0],[.16,.06,.1],[-.14,.05,.11],[.07,.04,-.16],[-.07,.09,-.14]].forEach((o,i)=>{
+        const b=new THREE.Mesh(new THREE.SphereGeometry(0.11,12,12),mkMat(cols[i],0.22,0.08));
+        b.position.set(...o);g.add(b);
+        const cr=new THREE.Mesh(new THREE.SphereGeometry(0.028,6,6),mkMat(0x1a0840));
+        cr.position.set(o[0],o[1]+0.1,o[2]);g.add(cr);
+      });
+      return g;
+    }
+  },
+  {id:'cherry',name:'Cherry',price:45,
+    build(){
+      const g=new THREE.Group();
+      const sm=mkMat(0x3a6e1a,0.8);
+      [-.13,.13].forEach((ox,i)=>{
+        const c=new THREE.Mesh(new THREE.SphereGeometry(0.13,14,12),mkMat(i?0xaa1010:0xcc1a1a,0.28,0.1));
+        c.position.set(ox,-.05,0);g.add(c);
+        const st=new THREE.Mesh(new THREE.CylinderGeometry(.016,.013,.28,8),sm);
+        st.position.set(ox,.18,0);st.rotation.z=ox*2.4;g.add(st);
+      });
+      const arc=new THREE.Mesh(new THREE.TorusGeometry(.13,.013,8,16,Math.PI),sm);
+      arc.position.y=.26;arc.rotation.z=Math.PI/2;g.add(arc);
+      return g;
+    }
+  },
+  {id:'raspberry',name:'Raspberry',price:65,
+    build(){
+      const g=new THREE.Group();
+      const dm=mkMat(0xd42060,0.4);
+      [[3,.12],[5,.05],[4,-.06],[2,-.15]].forEach(([n,y])=>{
+        for(let i=0;i<n;i++){
+          const a=(i/n)*Math.PI*2;
+          const d=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),dm);
+          d.position.set(Math.cos(a)*.13,y,Math.sin(a)*.13);g.add(d);
+        }
+      });
+      const top=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),dm);top.position.y=.19;g.add(top);
+      const lf=new THREE.Mesh(new THREE.ConeGeometry(.08,.11,5),mkMat(0x2a7a20,.7));
+      lf.position.y=-.17;lf.rotation.z=Math.PI;g.add(lf);
+      return g;
+    }
+  },
+  {id:'kiwi',name:'Kiwi',price:55,
+    build(){
+      const g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.SphereGeometry(.2,16,14),mkMat(0x5a3515,.85));
+      body.scale.set(1,.72,1);g.add(body);
+      const flesh=new THREE.Mesh(new THREE.CircleGeometry(.17,24),
+        new THREE.MeshStandardMaterial({color:0x7cc840,roughness:.5,side:THREE.DoubleSide}));
+      flesh.rotation.x=-Math.PI/2;flesh.position.y=.14;g.add(flesh);
+      for(let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2;
+        const line=new THREE.Mesh(new THREE.BoxGeometry(.012,.002,.14),mkMat(0x2a6010));
+        line.rotation.y=a;line.position.set(Math.cos(a)*.07,.142,Math.sin(a)*.07);g.add(line);
+        const seed=new THREE.Mesh(new THREE.SphereGeometry(.016,6,6),mkMat(0x1a1a1a));
+        seed.scale.set(.6,.4,1.2);seed.position.set(Math.cos(a)*.13,.143,Math.sin(a)*.13);g.add(seed);
+      }
+      const wc=new THREE.Mesh(new THREE.CircleGeometry(.04,12),
+        new THREE.MeshStandardMaterial({color:0xf0f0e0,roughness:.4,side:THREE.DoubleSide}));
+      wc.rotation.x=-Math.PI/2;wc.position.y=.144;g.add(wc);
+      return g;
+    }
+  },
+  {id:'mango',name:'Mango',price:70,
+    build(){
+      const g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.SphereGeometry(.2,16,14),mkMat(0xffb020,.42));
+      body.scale.set(.82,1.22,.72);g.add(body);
+      const hi=new THREE.Mesh(new THREE.SphereGeometry(.09,10,10),
+        new THREE.MeshStandardMaterial({color:0xff6a00,roughness:.28,transparent:true,opacity:.45}));
+      hi.position.set(.07,.11,.11);g.add(hi);
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(.018,.014,.14,8),mkMat(0x4a3010,.8));
+      st.position.y=.27;g.add(st);
+      return g;
+    }
+  },
+  {id:'peach',name:'Peach',price:55,
+    build(){
+      const g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.SphereGeometry(.2,16,14),mkMat(0xffaa70,.48));g.add(body);
+      const crease=new THREE.Mesh(new THREE.TorusGeometry(.16,.013,8,32,Math.PI),mkMat(0xff8040,.6));
+      crease.position.y=.01;crease.rotation.z=Math.PI/2;g.add(crease);
+      const blush=new THREE.Mesh(new THREE.SphereGeometry(.11,10,10),
+        new THREE.MeshStandardMaterial({color:0xff6060,roughness:.4,transparent:true,opacity:.38}));
+      blush.position.set(.09,.09,.11);g.add(blush);
+      const lf=new THREE.Mesh(new THREE.ConeGeometry(.065,.11,4),mkMat(0x3a7a20,.7));
+      lf.position.y=.22;g.add(lf);
+      return g;
+    }
+  },
+  {id:'lemon',name:'Lemon',price:40,
+    build(){
+      const g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.SphereGeometry(.19,16,14),mkMat(0xf5e020,.52));
+      body.scale.set(.78,1,0.78);g.add(body);
+      [.2,-.2].forEach(y=>{
+        const n=new THREE.Mesh(new THREE.SphereGeometry(.048,8,8),mkMat(0xe0c800,.6));
+        n.position.y=y;g.add(n);
+      });
+      for(let i=0;i<14;i++){
+        const a=(i/14)*Math.PI*2,ey=(Math.random()-.5)*.5;
+        const bump=new THREE.Mesh(new THREE.SphereGeometry(.013,5,5),mkMat(0xd8c818));
+        bump.position.set(Math.cos(a)*.19*Math.cos(ey),Math.sin(ey)*.2,Math.sin(a)*.19*Math.cos(ey));
+        g.add(bump);
+      }
+      return g;
+    }
+  },
+  {id:'mint',name:'Mint',price:30,
+    build(){
+      const g=new THREE.Group();
+      const lm=new THREE.MeshStandardMaterial({color:0x3db860,roughness:.6,side:THREE.DoubleSide});
+      const vm=mkMat(0x2a8840,.7);
+      [[-.24,.1],[0,.2],[.24,.1]].forEach(([rz,y])=>{
+        const lf=new THREE.Mesh(new THREE.ConeGeometry(.09,.26,6),lm);
+        lf.rotation.z=rz;lf.position.y=y;lf.scale.x=.55;g.add(lf);
+        const vn=new THREE.Mesh(new THREE.BoxGeometry(.009,.2,.007),vm);
+        vn.rotation.z=rz;vn.position.y=y;g.add(vn);
+      });
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(.013,.016,.18,8),vm);
+      st.position.y=-.07;g.add(st);
+      return g;
+    }
+  },
+  {id:'chocolate',name:'Choco Chip',price:35,
+    build(){
+      const g=new THREE.Group();
+      const cm=mkMat(0x3a1a08,.38,.14);
+      const body=new THREE.Mesh(new THREE.ConeGeometry(.17,.24,10),cm);
+      body.rotation.x=Math.PI;body.position.y=.06;g.add(body);
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.038,10),cm);
+      base.position.y=-.04;g.add(base);
+      const hi=new THREE.Mesh(new THREE.BoxGeometry(.028,.13,.028),
+        new THREE.MeshStandardMaterial({color:0x8a5040,roughness:.18,transparent:true,opacity:.55}));
+      hi.position.set(.055,.09,.09);hi.rotation.z=.18;g.add(hi);
+      return g;
+    }
+  },
+  {id:'macaroon',name:'Macaron',price:80,
+    build(){
+      const g=new THREE.Group();
+      const col=new THREE.Color().setHSL(.85,.7,.75);
+      const sm=mkMat(col,.44);
+      const fm=mkMat(0xffe0f0,.28);
+      const top=new THREE.Mesh(new THREE.SphereGeometry(.19,16,8,0,Math.PI*2,0,Math.PI/2),sm);
+      top.position.y=.07;top.scale.y=.68;g.add(top);
+      const bot=new THREE.Mesh(new THREE.SphereGeometry(.19,16,8,0,Math.PI*2,0,Math.PI/2),sm);
+      bot.position.y=-.07;bot.scale.y=.68;bot.rotation.x=Math.PI;g.add(bot);
+      const fill=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.09,24),fm);g.add(fill);
+      const ft=new THREE.Mesh(new THREE.TorusGeometry(.19,.022,8,24),mkMat(0xf0c0d8,.6));
+      ft.position.y=.055;g.add(ft);
+      const fb=ft.clone();fb.position.y=-.055;g.add(fb);
+      return g;
+    }
+  },
+  {id:'rose',name:'Sugar Rose',price:90,
+    build(){
+      const g=new THREE.Group();
+      const rm=new THREE.MeshStandardMaterial({color:0xe82858,roughness:.38,side:THREE.DoubleSide});
+      const im=new THREE.MeshStandardMaterial({color:0xc01840,roughness:.33,side:THREE.DoubleSide});
+      for(let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2;
+        const p=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6,0,Math.PI*2,0,Math.PI/2),i<4?im:rm);
+        p.scale.set(.55,.48,1);p.position.set(Math.cos(a)*.13,i<4?.05:0,Math.sin(a)*.13);
+        p.rotation.y=a;p.rotation.x=-.38;g.add(p);
+      }
+      const bud=new THREE.Mesh(new THREE.SphereGeometry(.085,10,10),im);bud.position.y=.07;g.add(bud);
+      const lfm=new THREE.MeshStandardMaterial({color:0x2a6a20,roughness:.7,side:THREE.DoubleSide});
+      [-.28,.28].forEach(rz=>{
+        const lf=new THREE.Mesh(new THREE.ConeGeometry(.065,.17,5),lfm);
+        lf.position.set(Math.cos(rz+Math.PI/2)*.18,-.09,Math.sin(rz+Math.PI/2)*.18);
+        lf.rotation.z=rz;lf.scale.x=.5;g.add(lf);
+      });
+      return g;
+    }
+  },
+];
+
+const FLAVORS=[
+  {id:'vanilla',   name:'Vanilla',    baseColor:0xf5dfa0, dot:'#f5d8a0'},
+  {id:'chocolate', name:'Choco',      baseColor:0x4a1e0a, dot:'#8b4513'},
+  {id:'strawberry',name:'Strawberry', baseColor:0xf4a0b4, dot:'#e8607a'},
+  {id:'matcha',    name:'Matcha',     baseColor:0x8fb96e, dot:'#7ab648'},
+  {id:'redvelvet', name:'Red Velvet', baseColor:0xa0192b, dot:'#c0392b'},
+  {id:'lemon',     name:'Lemon',      baseColor:0xf5f0a0, dot:'#f5d842'},
+];
+
+const FROST_COLORS=[
+  {hex:'#f5e6c8',name:'Cream'},{hex:'#ffffff',name:'White'},{hex:'#ef4444',name:'Red'},
+  {hex:'#f97316',name:'Orange'},{hex:'#f59e0b',name:'Yellow'},
+  {hex:'#84cc16',name:'Lime'},{hex:'#10b981',name:'Green'},{hex:'#06b6d4',name:'Cyan'},
+  {hex:'#3b82f6',name:'Blue'},{hex:'#6366f1',name:'Indigo'},{hex:'#8b5cf6',name:'Violet'},
+  {hex:'#d946ef',name:'Fuchsia'},{hex:'#ec4899',name:'Pink'},{hex:'#f43f5e',name:'Rose'},
+];
+
+const PRICES={tiers:{1:800,2:1400,3:2200,4:3200},flavor:{vanilla:0,chocolate:150,strawberry:200,matcha:250,redvelvet:300,lemon:180}};
+
+const state={tiers:1,flavorId:'vanilla',frostHex:'#f5e6c8',frostStyle:'smooth'};
+let placedToppings=[];
+let totalPrice=800;
+let dragTopping=null;
+
+// ── MINI PREVIEW RENDERERS
+function buildMiniPreview(toppingDef,cv){
+  const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  r.setSize(56,56,false);r.setClearColor(0,0);
+  const sc=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(42,1,.1,20);
+  cam.position.set(0,.15,1.0);cam.lookAt(0,0,0);
+  sc.add(new THREE.AmbientLight(0xffffff,.8));
+  const dl=new THREE.DirectionalLight(0xffffff,1.3);dl.position.set(1,2,2);sc.add(dl);
+  const dm=new THREE.DirectionalLight(0x8888ff,.4);dm.position.set(-1,1,-1);sc.add(dm);
+  const mesh=toppingDef.build();sc.add(mesh);
+  let ang=0;
+  (function loop(){requestAnimationFrame(loop);ang+=0.022;mesh.rotation.y=ang;r.render(sc,cam);})();
+}
+
+// ── BUILD PALETTE
+const palette=document.getElementById('toppingPalette');
+TOPPINGS.forEach(t=>{
+  const el=document.createElement('div');
+  el.className='topping-item';
+  el.dataset.id=t.id;
+  const cv=document.createElement('canvas');
+  cv.className='topping-canvas';cv.width=56;cv.height=56;
+  el.appendChild(cv);
+  const nm=document.createElement('div');nm.className='topping-name';nm.textContent=t.name;el.appendChild(nm);
+  const pr=document.createElement('div');pr.className='topping-price';pr.textContent='+₱'+t.price;el.appendChild(pr);
+  el.draggable=true;
+  el.addEventListener('dragstart',e=>{
+    dragTopping=t;
+    e.dataTransfer.setDragImage(new Image(),0,0);
+    document.getElementById('dropZone').classList.add('active');
+    isAutoRotating=false;
+    document.getElementById('autoRotBtn').textContent='Auto Rotate: OFF';
+  });
+  palette.appendChild(el);
+  setTimeout(()=>buildMiniPreview(t,cv),80*TOPPINGS.indexOf(t));
+});
+
+// ── FLAVOR GRID
+const fg=document.getElementById('flavorGrid');
+FLAVORS.forEach(f=>{
+  const btn=document.createElement('button');
+  btn.className='flavor-btn'+(f.id==='vanilla'?' active':'');
+  btn.innerHTML=`<span class="flavor-dot" style="background:${f.dot}"></span>${f.name}`;
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.flavor-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.flavorId=f.id;
+    buildCake();updatePrice();
+  });
+  fg.appendChild(btn);
+});
+
+// ── SWATCHES
+const sr=document.getElementById('swatchRow');
+FROST_COLORS.forEach((c,i)=>{
+  const el=document.createElement('div');
+  el.className='swatch'+(c.hex===state.frostHex?' active':'');
+  el.style.background=c.hex;
+  if(c.hex==='#ffffff')el.style.outline='1px solid #444';
+  el.title=c.name;
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+    el.classList.add('active');
+    state.frostHex=c.hex;
+    buildCake();
+  });
+  sr.appendChild(el);
+});
+
+// ── PRICE
+function updatePrice(){
+  let p=PRICES.tiers[state.tiers]+(PRICES.flavor[state.flavorId]||0);
+  placedToppings.forEach(pt=>{const d=TOPPINGS.find(x=>x.id===pt.id);if(d)p+=d.price;});
+  totalPrice=p;
+  document.getElementById('priceAmt').textContent='₱'+p.toLocaleString();
+  document.getElementById('toppingCountNum').textContent=placedToppings.length;
+}
+updatePrice();
+
+// ─────────────────────────────────────────────
+// MAIN THREE.JS SCENE
+// ─────────────────────────────────────────────
+const mainCanvas=document.getElementById('threeCanvas');
+const vpEl=document.getElementById('viewport');
+
+const renderer=new THREE.WebGLRenderer({canvas:mainCanvas,antialias:true,alpha:false,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.3;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a0a12);
+scene.fog=new THREE.Fog(0x0a0a12,18,38);
+
+const camera=new THREE.PerspectiveCamera(45,1,.1,100);
+camera.position.set(0,4,10);camera.lookAt(0,0,0);
+
+// LIGHTS
+scene.add(new THREE.AmbientLight(0xffffff,.45));
+const keyLight=new THREE.DirectionalLight(0xfff5e0,1.7);
+keyLight.position.set(5,10,7);keyLight.castShadow=true;
+keyLight.shadow.mapSize.set(2048,2048);
+keyLight.shadow.camera.near=.5;keyLight.shadow.camera.far=40;
+keyLight.shadow.camera.left=-10;keyLight.shadow.camera.right=10;
+keyLight.shadow.camera.top=10;keyLight.shadow.camera.bottom=-10;
+scene.add(keyLight);
+const fillL=new THREE.DirectionalLight(0xc8e8ff,.55);fillL.position.set(-5,3,-4);scene.add(fillL);
+const rimL=new THREE.DirectionalLight(0xc8ff00,.28);rimL.position.set(0,5,-8);scene.add(rimL);
+const candleL=new THREE.PointLight(0xff8844,.7,20);candleL.position.set(2,3,3);scene.add(candleL);
+
+// ── PLATE: positioned dynamically in buildCake(), stored here
+let plateMesh = null;
+
+// Grid floor
+const grid=new THREE.GridHelper(6,20,0x1a3a1a,0x1a2a1a);grid.position.y=-2.5;scene.add(grid);
+
+// GROUPS
+const cakeGroup=new THREE.Group();scene.add(cakeGroup);
+const toppingGroup=new THREE.Group();scene.add(toppingGroup);
+let cakeMeshes=[];
+let tierInfo=[];
+
+function hexToThreeColor(hex){
+  // THREE.Color natively accepts CSS hex strings like '#ef4444'
+  return new THREE.Color(hex);
+}
+
+function buildCake(){
+  // Dispose old cake geometry/materials
+  cakeGroup.traverse(obj=>{
+    if(obj.isMesh){
+      if(obj.geometry)obj.geometry.dispose();
+      const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+      mats.forEach(m=>{if(m)m.dispose();});
+    }
+  });
+  while(cakeGroup.children.length)cakeGroup.remove(cakeGroup.children[0]);
+  cakeMeshes=[];tierInfo=[];
+
+  // Remove old plate from scene
+  if(plateMesh){scene.remove(plateMesh);plateMesh.geometry.dispose();plateMesh.material.dispose();plateMesh=null;}
+
+  const saved=placedToppings.map(p=>({id:p.id,worldPos:p.worldPos.clone(),normal:p.normal.clone()}));
+  _clearToppingMeshesOnly();
+
+  const tiers=state.tiers;
+  const flavorDef=FLAVORS.find(f=>f.id===state.flavorId)||FLAVORS[0];
+  const baseCol=new THREE.Color(flavorDef.baseColor);
+  const frostCol=hexToThreeColor(state.frostHex);
+
+  const tierDefs=[{r:2.2,h:1.4},{r:1.7,h:1.2},{r:1.2,h:1.0},{r:.8,h:.8}];
+
+  // Calculate total height
+  let totalHeight=0;
+  for(let i=0;i<tiers;i++){
+    const {h}=tierDefs[i];
+    totalHeight+=h+(i<tiers-1?0.14:0);
+  }
+
+  // Stack tiers from y=0 upward within the group
+  let y=0;
+  for(let i=0;i<tiers;i++){
+    const {r,h}=tierDefs[i];
+
+    const sponge=new THREE.Mesh(
+      new THREE.CylinderGeometry(r-.04,r,h,64,4),
+      new THREE.MeshStandardMaterial({color:baseCol.clone(),roughness:.85,metalness:0})
+    );
+    sponge.position.y=y+h/2;
+    sponge.castShadow=true;sponge.receiveShadow=true;
+    sponge.userData={cakePart:'side',tierIdx:i,r,h,baseY:y};
+    cakeGroup.add(sponge);cakeMeshes.push(sponge);
+
+    const frostTop=new THREE.Mesh(
+      new THREE.CylinderGeometry(r,r,.13,64),
+      new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:state.frostStyle==='naked'?.85:.25,metalness:0})
+    );
+    frostTop.position.y=y+h+.065;
+    frostTop.castShadow=true;
+    frostTop.userData={cakePart:'top',tierIdx:i,r,topSurfaceY:y+h+.13};
+    cakeGroup.add(frostTop);cakeMeshes.push(frostTop);
+
+    const sideMat=new THREE.MeshStandardMaterial({
+      color:frostCol.clone(),roughness:state.frostStyle==='naked'?.9:.32,metalness:0,
+      opacity:state.frostStyle==='naked'?.32:1,transparent:state.frostStyle==='naked',side:THREE.FrontSide
+    });
+    const frostSide=new THREE.Mesh(new THREE.CylinderGeometry(r+.025,r+.025,h,64,1,true),sideMat);
+    frostSide.position.y=y+h/2;
+    frostSide.userData={cakePart:'side',tierIdx:i,r,h,baseY:y};
+    cakeGroup.add(frostSide);cakeMeshes.push(frostSide);
+
+    tierInfo.push({r,h,baseY:y,topY:y+h+.13});
+
+    if(state.frostStyle==='ruffle'){
+      for(let j=0;j<20;j++){
+        const a=(j/20)*Math.PI*2;
+        const ru=new THREE.Mesh(new THREE.SphereGeometry(.095,8,8),
+          new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:.42}));
+        ru.position.set(Math.cos(a)*(r+.045),y+h+.038,Math.sin(a)*(r+.045));
+        cakeGroup.add(ru);
+      }
+    }
+    if(state.frostStyle==='drip'){
+      const dc=10+Math.floor(r*4);
+      for(let j=0;j<dc;j++){
+        const a=(j/dc)*Math.PI*2+Math.random()*.3;
+        const dl=.18+Math.random()*.48;
+        const dm=new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:.18});
+        const drip=new THREE.Mesh(new THREE.CylinderGeometry(.038,.02,dl,8),dm);
+        drip.position.set(Math.cos(a)*r,y+h-dl/2,Math.sin(a)*r);
+        cakeGroup.add(drip);
+        const ball=new THREE.Mesh(new THREE.SphereGeometry(.042,8,8),dm);
+        ball.position.set(Math.cos(a)*r,y+h-dl,Math.sin(a)*r);
+        cakeGroup.add(ball);
+      }
+    }
+
+    if(i===tiers-1){
+      const cc=Math.min(tiers+2,6);
+      for(let c=0;c<cc;c++){
+        const a=(c/cc)*Math.PI*2,cr=r*.55;
+        const candle=new THREE.Mesh(
+          new THREE.CylinderGeometry(.055,.055,.52,12),
+          new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(c/cc,.85,.68),roughness:.5})
+        );
+        candle.position.set(Math.cos(a)*cr,y+h+.26+.13,Math.sin(a)*cr);
+        cakeGroup.add(candle);
+        const flame=new THREE.Mesh(
+          new THREE.SphereGeometry(.06,8,8),
+          new THREE.MeshStandardMaterial({color:0xff9900,emissive:0xff5500,emissiveIntensity:1.9,roughness:.18})
+        );
+        flame.scale.set(.68,1.25,.68);
+        flame.position.set(Math.cos(a)*cr,y+h+.62+.13,Math.sin(a)*cr);
+        cakeGroup.add(flame);
+      }
+    }
+    y+=h+.14;
+  }
+
+  // Center the cake group vertically
+  const groupOffset = -totalHeight/2;
+  cakeGroup.position.y = groupOffset;
+
+  // Place plate just below the bottom of the cake in world space
+  const plateWorldY = groupOffset - 0.08;
+  const bottomTierR = tierDefs[0].r;
+  plateMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(bottomTierR + 0.6, bottomTierR + 0.6, 0.12, 64),
+    new THREE.MeshStandardMaterial({color:0x1a1a2e, roughness:.2, metalness:.8})
+  );
+  plateMesh.position.y = plateWorldY;
+  plateMesh.receiveShadow = true;
+  scene.add(plateMesh);
+
+  // Also reposition the grid to sit just below the plate
+  grid.position.y = plateWorldY - 0.07;
+
+  // Restore saved toppings
+  saved.forEach(pt=>{
+    const def=TOPPINGS.find(x=>x.id===pt.id);
+    if(!def)return;
+    const top=tierInfo[tierInfo.length-1];
+    const worldTopY=top.topY+cakeGroup.position.y;
+    const pos=new THREE.Vector3(pt.worldPos.x,worldTopY,pt.worldPos.z);
+    const dist=Math.sqrt(pos.x*pos.x+pos.z*pos.z);
+    const maxR=top.r*.85;
+    if(dist>maxR){pos.x*=maxR/dist;pos.z*=maxR/dist;}
+    _addToppingMesh(def,pos,pt.normal);
+  });
+
+  updatePrice();
+}
+
+// ── TOPPING MESH MANAGEMENT
+function _addToppingMesh(def,worldPos,normal){
+  const mesh=def.build();
+  mesh.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;}});
+  mesh.position.copy(worldPos);
+
+  const isTop=!normal||normal.y>0.7;
+  if(isTop){
+    mesh.position.y+=.14;
+  }else{
+    const angle=Math.atan2(normal.x,normal.z);
+    mesh.rotation.y=angle;
+    mesh.rotation.x=Math.PI*.18;
+    mesh.position.x+=normal.x*.05;
+    mesh.position.z+=normal.z*.05;
+    mesh.position.y+=.08;
+  }
+
+  const ringGeo=new THREE.RingGeometry(.12,.18,24);
+  const ringMat=new THREE.MeshBasicMaterial({color:0xc8ff00,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});
+  const ring=new THREE.Mesh(ringGeo,ringMat);
+  ring.rotation.x=-Math.PI/2;
+  ring.position.set(worldPos.x,worldPos.y+.01,worldPos.z);
+  toppingGroup.add(ring);
+  toppingGroup.add(mesh);
+
+  const entry={id:def.id,mesh,ring,worldPos:worldPos.clone(),normal:(normal||new THREE.Vector3(0,1,0)).clone()};
+  mesh.traverse(c=>{if(c.isMesh)c.userData.toppingEntry=entry;});
+  placedToppings.push(entry);
+  updatePrice();
+
+  mesh.scale.setScalar(.01);ring.scale.setScalar(.01);
+  let t2=0;
+  (function pop(){t2+=.13;const sc=t2<1?t2*t2*(3-2*t2):1;
+    mesh.scale.setScalar(Math.max(.01,sc));ring.scale.setScalar(Math.max(.01,sc));
+    if(t2<1)requestAnimationFrame(pop);else{mesh.scale.setScalar(1);ring.scale.setScalar(1);}
+  })();
+  return entry;
+}
+
+function _clearToppingMeshesOnly(){
+  placedToppings.forEach(e=>{
+    toppingGroup.remove(e.mesh);toppingGroup.remove(e.ring);
+  });
+  while(toppingGroup.children.length)toppingGroup.remove(toppingGroup.children[0]);
+  placedToppings=[];
+}
+
+function removeToppingEntry(entry){
+  toppingGroup.remove(entry.mesh);toppingGroup.remove(entry.ring);
+  entry.mesh.traverse(c=>{if(c.isMesh&&c.geometry)c.geometry.dispose();});
+  placedToppings=placedToppings.filter(p=>p!==entry);
+  updatePrice();
+}
+
+buildCake();
+
+// ── RAYCASTER
+const raycaster=new THREE.Raycaster();
+const mouseVec=new THREE.Vector2();
+
+function setNDC(cx,cy){
+  const rect=vpEl.getBoundingClientRect();
+  mouseVec.x=((cx-rect.left)/rect.width)*2-1;
+  mouseVec.y=-((cy-rect.top)/rect.height)*2+1;
+}
+function raycastCake(cx,cy){
+  setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);
+  const hits=raycaster.intersectObjects(cakeMeshes,false);
+  if(!hits.length)return null;
+  return hits.find(h=>h.object.userData.cakePart==='top')||hits[0];
+}
+function raycastToppings(cx,cy){
+  setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);
+  const meshes=[];
+  placedToppings.forEach(e=>e.mesh.traverse(c=>{if(c.isMesh)meshes.push(c);}));
+  const hits=raycaster.intersectObjects(meshes,false);
+  return hits.length?hits[0]:null;
+}
+
+// ── CAMERA ORBIT
+let isAutoRotating=true;
+let mouseDown=false,rightDown=false,lastMX=0,lastMY=0;
+let camTheta=0,camPhi=Math.PI/4,camRadius=10;
+const camTarget=new THREE.Vector3(0,0,0);
+let hoveredEntry=null;
+
+function updateCamera(){
+  camera.position.x=camTarget.x+camRadius*Math.sin(camPhi)*Math.sin(camTheta);
+  camera.position.y=camTarget.y+camRadius*Math.cos(camPhi);
+  camera.position.z=camTarget.z+camRadius*Math.sin(camPhi)*Math.cos(camTheta);
+  camera.lookAt(camTarget);
+}
+updateCamera();
+
+mainCanvas.addEventListener('mousemove',e=>{
+  if(dragTopping){
+    const hit=raycastCake(e.clientX,e.clientY);
+    const ind=document.getElementById('dropIndicator');
+    if(hit){
+      const rect=vpEl.getBoundingClientRect();
+      const v=hit.point.clone().project(camera);
+      ind.style.left=((v.x*.5+.5)*rect.width)+'px';
+      ind.style.top=((-v.y*.5+.5)*rect.height)+'px';
+      ind.style.display='block';
+    }else ind.style.display='none';
+    return;
+  }
+  const hit=raycastToppings(e.clientX,e.clientY);
+  if(hit){
+    const entry=hit.object.userData.toppingEntry;
+    if(entry&&entry!==hoveredEntry){
+      if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);}
+      hoveredEntry=entry;entry.ring.material.opacity=.6;entry.mesh.scale.setScalar(1.18);
+    }
+  }else{
+    if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);hoveredEntry=null;}
+  }
+});
+
+mainCanvas.addEventListener('mousedown',e=>{
+  if(e.button===0&&!dragTopping){
+    const hit=raycastToppings(e.clientX,e.clientY);
+    if(hit&&hit.object.userData.toppingEntry){
+      removeToppingEntry(hit.object.userData.toppingEntry);
+      hoveredEntry=null;showToast('Topping removed ✕');return;
+    }
+    mouseDown=true;isAutoRotating=false;
+    document.getElementById('autoRotBtn').textContent='Auto Rotate: OFF';
+  }
+  if(e.button===2)rightDown=true;
+  lastMX=e.clientX;lastMY=e.clientY;
+});
+window.addEventListener('mouseup',()=>{mouseDown=false;rightDown=false;});
+window.addEventListener('mousemove',e=>{
+  if(mouseDown&&!dragTopping){
+    camTheta-=(e.clientX-lastMX)*.008;
+    camPhi=Math.max(.1,Math.min(Math.PI/2,camPhi+(e.clientY-lastMY)*.006));
+    updateCamera();
+  }
+  if(rightDown){
+    camTarget.x-=(e.clientX-lastMX)*.01;camTarget.y+=(e.clientY-lastMY)*.01;updateCamera();
+  }
+  lastMX=e.clientX;lastMY=e.clientY;
+});
+mainCanvas.addEventListener('wheel',e=>{
+  e.preventDefault();camRadius=Math.max(3,Math.min(22,camRadius+e.deltaY*.015));updateCamera();
+},{passive:false});
+mainCanvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ── DRAG & DROP
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('dragend',()=>{
+  document.getElementById('dropZone').classList.remove('active');
+  document.getElementById('dropIndicator').style.display='none';
+  dragTopping=null;
+});
+vpEl.addEventListener('dragover',e=>e.preventDefault());
+vpEl.addEventListener('drop',e=>{
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('active');
+  document.getElementById('dropIndicator').style.display='none';
+  if(!dragTopping)return;
+  const hit=raycastCake(e.clientX,e.clientY);
+  if(hit){
+    const pos=hit.point.clone();
+    const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+    if(hit.object.userData.cakePart==='top'){
+      const topY=hit.object.userData.topSurfaceY!==undefined
+        ? hit.object.userData.topSurfaceY+cakeGroup.position.y
+        : hit.object.position.y+cakeGroup.position.y+.065;
+      pos.y=topY;
+      const dist=Math.sqrt(pos.x*pos.x+pos.z*pos.z);
+      const maxR=(hit.object.userData.r||2)*.86;
+      if(dist>maxR){pos.x*=maxR/dist;pos.z*=maxR/dist;}
+      _addToppingMesh(dragTopping,pos,new THREE.Vector3(0,1,0));
+    }else{
+      pos.addScaledVector(normal,.06);
+      _addToppingMesh(dragTopping,pos,normal);
+    }
+    showToast(dragTopping.name+' placed on cake!');
+  }else{
+    showToast('Drop directly on the cake 🎂');
+  }
+  dragTopping=null;
+});
+
+// ── UI BUTTONS
+document.querySelectorAll('.tier-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tier-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');state.tiers=parseInt(b.dataset.t);buildCake();
+  });
+});
+document.querySelectorAll('.frost-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.frost-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');state.frostStyle=b.dataset.f;buildCake();
+  });
+});
+document.getElementById('resetCamBtn').addEventListener('click',()=>{
+  camTheta=0;camPhi=Math.PI/4;camRadius=10;camTarget.set(0,0,0);updateCamera();
+});
+document.getElementById('autoRotBtn').addEventListener('click',()=>{
+  isAutoRotating=!isAutoRotating;
+  document.getElementById('autoRotBtn').textContent='Auto Rotate: '+(isAutoRotating?'ON':'OFF');
+});
+document.getElementById('snapBtn').addEventListener('click',()=>{
+  renderer.render(scene,camera);
+  const url=renderer.domElement.toDataURL('image/png');
+  const a=document.createElement('a');a.href=url;a.download='my-cake.png';a.click();
+  showToast('📸 Snapshot saved!');
+});
+document.getElementById('clearToppingsBtn').addEventListener('click',()=>{
+  _clearToppingMeshesOnly();updatePrice();showToast('All toppings cleared');
+});
+document.getElementById('orderBtn').addEventListener('click',()=>{
+  showToast('🎂 Order placed! ₱'+totalPrice.toLocaleString());
+});
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── RESIZE
+function resize(){
+  const w=vpEl.clientWidth,h=vpEl.clientHeight;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);resize();
+
+// ── RENDER LOOP
+const clock=new THREE.Clock();
+(function renderLoop(){
+  requestAnimationFrame(renderLoop);
+  const dt=clock.getDelta(),t=clock.getElapsedTime();
+  if(isAutoRotating)camTheta+=dt*.30;
+  candleL.intensity=.55+.22*Math.sin(t*8.1)*Math.cos(t*5.2);
+  placedToppings.forEach((e,i)=>{
+    if(e.normal&&e.normal.y>.7)
+      e.mesh.position.y=e.worldPos.y+.14+Math.sin(t*1.3+i*1.07)*.013;
+  });
+  updateCamera();
+  renderer.render(scene,camera);
+})();
+</script>
+</body>
+</html>
