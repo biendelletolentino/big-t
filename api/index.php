@@ -606,24 +606,39 @@
       </div>
     </div>
     <div class="overview-info">
-      <div>
-        <div class="overview-tag">// Interactive Design</div>
-        <h2 class="overview-heading">3D CAKE<br><span>CUSTOMIZATION</span></h2>
-      </div>
-      <p class="overview-desc">A real-time interactive 3D cake designer built for bakeries and their customers. Drag, drop, stack, and style every element of a cake with instant visual feedback and see the cost update live as you build.</p>
-      <ul class="feature-list">
-        <li>Real-time 3D preview with full rotation</li>
-        <li>Drag-and-drop tier, flavor & decoration tools</li>
-        <li>Automatic cost estimator as you design</li>
-        <li>Export finished design as a shareable PDF</li>
-      </ul>
-      <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
-        <div class="price-badge">
-          <span class="sym">₱</span>
-          <span class="amt">1,699</span>
-          <span class="per">/ month</span>
-        </div>
-        <a href="#contact" class="btn-primary"><span>Get Access →</span></a>
+  <div>
+    <div class="overview-tag">// Interactive Design</div>
+
+    <h2 class="overview-heading">
+      BASIC 3D CAKE<br>
+      <span>CUSTOMIZATION</span>
+    </h2>
+  </div>
+
+  <p class="overview-desc">
+    A beginner-friendly 3D cake customization system designed for small bakeries and startups. Create simple cake designs with essential customization tools, standard templates, and online ordering support for customers.
+  </p>
+
+  <ul class="feature-list">
+    <li>Basic 3D cake customization interface</li>
+    <li>Limited design elements and decorations</li>
+    <li>Standard cake templates included</li>
+    <li>Online order form integration</li>
+    <li>Customer support via email/chat</li>
+  </ul>
+
+  <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+    
+    <div class="price-badge">
+      <span class="sym">₱</span>
+      <span class="amt">1,499</span>
+      <span class="per">/ month</span>
+    </div>
+
+    <a href="#contact" class="btn-primary">
+      <span>Get Basic Plan →</span>
+    </a>
+
       </div>
     </div>
   </div>
