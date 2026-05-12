@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BIG T</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/x-icon" href="../favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
@@ -334,6 +334,191 @@
       .form-field.full { grid-column:span 1; }
       .pricing-grid { grid-template-columns:1fr; }
     }
+
+/* ── TEAM SECTION ───────────────────────────── */
+#team {
+  padding: 110px 60px;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+.team-header {
+  margin-bottom: 70px;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+.team-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  aspect-ratio: 0.8;
+  transition:
+    transform 0.4s cubic-bezier(0.22,1,0.36,1),
+    border-color 0.3s,
+    box-shadow 0.4s;
+  cursor: none;
+}
+
+[data-theme="light"] .team-card {
+  box-shadow: 0 2px 12px rgba(26,24,20,0.05);
+}
+
+.team-card:hover {
+  transform: translateY(-10px);
+  border-color: var(--acid);
+}
+
+[data-theme="light"] .team-card:hover {
+  box-shadow: 0 10px 30px rgba(122,184,0,0.15);
+}
+
+.team-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(100%);
+  transition:
+    transform 0.5s ease,
+    filter 0.5s ease;
+}
+
+.team-card:hover img {
+  transform: scale(1.06);
+  filter: grayscale(0%);
+}
+
+/* overlay gradient */
+.team-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 28px 24px;
+  background:
+    linear-gradient(
+      to top,
+      rgba(5,5,8,0.96) 0%,
+      rgba(5,5,8,0.75) 45%,
+      transparent 100%
+    );
+  z-index: 2;
+}
+
+[data-theme="light"] .team-overlay {
+  background:
+    linear-gradient(
+      to top,
+      rgba(249,247,242,0.96) 0%,
+      rgba(249,247,242,0.75) 45%,
+      transparent 100%
+    );
+}
+
+.team-role {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--acid);
+  margin-bottom: 10px;
+}
+
+.team-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+}
+
+.team-tag {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* team number */
+.team-num {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 3;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.6rem;
+  line-height: 1;
+  color: rgba(200,255,0,0.48);
+  pointer-events: none;
+}
+
+[data-theme="light"] .team-num {
+  color: rgba(122,184,0,0.52);
+}
+
+/* scanning effect */
+.team-scan {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(200,255,0,0.08) 50%,
+      transparent 100%
+    );
+  transform: translateY(-100%);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+
+.team-card:hover .team-scan {
+  transform: translateY(100%);
+}
+
+/* subtle border glow */
+.team-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  z-index: 3;
+  transition: border-color 0.3s;
+}
+
+.team-card:hover::before {
+  border-color: rgba(200,255,0,0.4);
+}
+
+/* responsive */
+@media(max-width:1100px){
+  .team-grid {
+    grid-template-columns: repeat(2,1fr);
+  }
+}
+
+@media(max-width:700px){
+  #team {
+    padding: 80px 22px;
+  }
+
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-card {
+    aspect-ratio: 0.9;
+  }
+
+  .team-name {
+    font-size: 1.5rem;
+  }
+}
   </style>
 </head>
 <body>
@@ -345,14 +530,15 @@
 <nav>
   <!-- <a class="nav-logo" href="#">BIG T</a> -->
    <a class="nav-logo" aria-label="BIG T Home">
-    <img src="logo.png" alt="BIG T Logo" style="height:42px; width:auto; display:block; object-fit:contain; border-radius:20px;" loading="lazy"/>
+    <img src="../logo.png" alt="BIG T Logo" style="height:42px; width:auto; display:block; object-fit:contain; border-radius:20px;" loading="lazy"/>
   </a>
   <div class="nav-links">
     <a href="#overview">Product</a>
     <a href="#features">Features</a>
     <a href="#how">How It Works</a>
     <a href="#pricing">Pricing</a>
-    <a href="#contact" class="active">Contact</a>
+    <a href="#contact">Contact</a>
+    <a href="#team">Team</a>
   </div>
   <div class="nav-right">
     <div class="theme-toggle" id="themeToggle">
@@ -771,6 +957,41 @@
     </div>
   </div>
 </section>
+
+<?php
+$members = [
+  ["photo"=>"../member1.png","role"=>"CEO","name"=>"Biendelle Tolentino","tag"=>"Camel lang sapat na"],
+  ["photo"=>"../member2.png","role"=>"COO","name"=>"Maverick Ursolino","tag"=>"Anton my loves"],
+  ["photo"=>"../member3.png","role"=>"CFO","name"=>"John Michael Rudavites","tag"=>"2k lang"],
+  ["photo"=>"../member4.png","role"=>"CTO","name"=>"Mark Bantilan","tag"=>"Parlay"],
+  ["photo"=>"../member5.png","role"=>"CIO","name"=>"Macky Dumaraog","tag"=>"MCDO"],
+  ["photo"=>"../member6.png","role"=>"CMO","name"=>"Roden Rocamora","tag"=>"Malakas mag ml"],
+  ["photo"=>"../member7.png","role"=>"CHRO","name"=>"Ronald Zulueta","tag"=>"Mahilig sa babae"],
+  ["photo"=>"../member8.png","role"=>"CISCO","name"=>"Junmari De Guzman","tag"=>"send vid sa"],
+];
+?>
+<section id="team">
+  <div class="team-header">
+    <div class="section-label">The Team</div>
+    <h2 class="section-title">MEET THE<br><span style="color:var(--acid)">BUILDERS.</span></h2>
+  </div>
+  <div class="team-grid">
+    <?php foreach($members as $i => $m): ?>
+    <div class="team-card">
+      <div class="team-scan"></div>
+      <img src="<?= $m['photo'] ?>" alt="<?= $m['name'] ?>"/>
+      <div class="team-num">0<?= $i+1 ?></div>
+      <div class="team-overlay">
+        <div class="team-role"><?= $m['role'] ?></div>
+        <div class="team-name"><?= $m['name'] ?></div>
+        <div class="team-tag"><?= $m['tag'] ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</section>
+
+
 
 <!-- FOOTER -->
 <footer>
