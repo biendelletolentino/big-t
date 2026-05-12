@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BIG T</title>
-  <link rel="icon" type="image/x-icon" href="resources/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="../public/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
@@ -530,7 +530,7 @@
 <nav>
   <!-- <a class="nav-logo" href="#">BIG T</a> -->
    <a class="nav-logo" aria-label="BIG T Home">
-    <img src="resources/logo.png" alt="BIG T Logo" style="height:42px; width:auto; display:block; object-fit:contain; border-radius:20px;" loading="lazy"/>
+    <img src="../public/logo.png" alt="BIG T Logo" style="height:42px; width:auto; display:block; object-fit:contain; border-radius:20px;" loading="lazy"/>
   </a>
   <div class="nav-links">
     <a href="#overview">Product</a>
@@ -567,7 +567,7 @@
       <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="1,0 11,6 1,12"/></svg>
       Get Access
     </a>
-    <a href="demo-cake3d.html" class="btn-outline" style="margin-left:12px;">
+    <a href="../demo-cake3d.html" class="btn-outline" style="margin-left:12px;">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1l8 5-8 5V1z" stroke-linejoin="round"/></svg>
       Try Demo
     </a>
@@ -960,14 +960,14 @@
 
 <?php
 $members = [
-  ["photo"=>"resources/member1.png","role"=>"CEO","name"=>"Biendelle Tolentino","tag"=>"Camel lang sapat na"],
-  ["photo"=>"resources/member2.png","role"=>"COO","name"=>"Maverick Ursolino","tag"=>"Anton my loves"],
-  ["photo"=>"resources/member3.png","role"=>"CFO","name"=>"John Michael Rudavites","tag"=>"2k lang"],
-  ["photo"=>"resources/member4.png","role"=>"CTO","name"=>"Mark Bantilan","tag"=>"Parlay"],
-  ["photo"=>"resources/member5.png","role"=>"CIO","name"=>"Macky Dumaraog","tag"=>"MCDO"],
-  ["photo"=>"resources/member6.png","role"=>"CMO","name"=>"Roden Rocamora","tag"=>"Malakas mag ml"],
-  ["photo"=>"resources/member7.png","role"=>"CHRO","name"=>"Ronald Zulueta","tag"=>"Mahilig sa babae"],
-  ["photo"=>"resources/ksmember8.png","role"=>"CISCO","name"=>"Junmari De Guzman","tag"=>"send vid sa"],
+  ["photo"=>"../public/member1.png","role"=>"CEO","name"=>"Biendelle Tolentino","tag"=>"Camel lang sapat na"],
+  ["photo"=>"../public/member2.png","role"=>"COO","name"=>"Maverick Ursolino","tag"=>"Anton my loves"],
+  ["photo"=>"../public/member3.png","role"=>"CFO","name"=>"John Michael Rudavites","tag"=>"2k lang"],
+  ["photo"=>"../public/member4.png","role"=>"CTO","name"=>"Mark Bantilan","tag"=>"Parlay"],
+  ["photo"=>"../public/member5.png","role"=>"CIO","name"=>"Macky Dumaraog","tag"=>"MCDO"],
+  ["photo"=>"../public/member6.png","role"=>"CMO","name"=>"Roden Rocamora","tag"=>"Malakas mag ml"],
+  ["photo"=>"../public/member7.png","role"=>"CHRO","name"=>"Ronald Zulueta","tag"=>"Mahilig sa babae"],
+  ["photo"=>"../public/member8.png","role"=>"CISCO","name"=>"Junmari De Guzman","tag"=>"send vid sa"],
 ];
 ?>
 <section id="team">
