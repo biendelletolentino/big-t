@@ -567,7 +567,7 @@
       <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="1,0 11,6 1,12"/></svg>
       Get Access
     </a>
-    <a href="../demo-cake3d.html" class="btn-outline" style="margin-left:12px;">
+    <a href="/demo-cake3d.html" class="btn-outline" style="margin-left:12px;">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1l8 5-8 5V1z" stroke-linejoin="round"/></svg>
       Try Demo
     </a>
