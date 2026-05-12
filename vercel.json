@@ -6,6 +6,18 @@
   },
   "routes": [
     {
+      "src": "/demo-cake3d.html",
+      "dest": "/demo-cake3d.html"
+    },
+    {
+      "src": "/(.*\\.png)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*\\.ico)",
+      "dest": "/public/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.php"
     }
