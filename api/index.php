@@ -529,7 +529,7 @@
 <!-- NAV -->
 <nav>
   <!-- <a class="nav-logo" href="#">BIG T</a> -->
-   <a class="nav-logo" aria-label="BIG T Home">
+   <a class="nav-logo" href="#" aria-label="BIG T Home">
     <img src="/logo.png" alt="BIG T Logo" style="height:42px; width:auto; display:block; object-fit:contain; border-radius:20px;" loading="lazy"/>
   </a>
   <div class="nav-links">
