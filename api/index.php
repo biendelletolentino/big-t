@@ -175,8 +175,8 @@
     .step-item:hover { border-color:var(--acid); }
     [data-theme="light"] .step-item:hover { box-shadow:0 4px 20px rgba(122,184,0,0.09); }
     .step-item:not(:last-child)::after { content:'→'; position:absolute; right:-14px; top:50%; transform:translateY(-50%); font-size:1rem; color:var(--acid); z-index:2; font-family:'Space Mono',monospace; }
-    .step-num { font-family:'Bebas Neue',sans-serif; font-size:3.5rem; color:rgba(200,255,0,0.20); line-height:1; margin-bottom:18px; }
-    [data-theme="light"] .step-num { color:rgba(122,184,0,0.20); }
+    .step-num { font-family:'Bebas Neue',sans-serif; font-size:3.5rem; color:rgba(200,255,0,0.40); line-height:1; margin-bottom:18px; }
+    [data-theme="light"] .step-num { color:rgba(122,184,0,0.40); }
     .step-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.04em; margin-bottom:12px; color:var(--fg); }
     .step-desc { font-size:0.82rem; color:var(--muted); line-height:1.8; }
 
@@ -785,23 +785,31 @@
 <!-- PRICING -->
 <section id="pricing">
   <div class="section-label">Pricing</div>
-  <h2 class="section-title">CHOOSE THE RIGHT<br>PLAN FOR YOUR BUSINESS.</h2>
+  <h2 class="section-title">
+    CHOOSE THE RIGHT<br>PLAN FOR YOUR BUSINESS.
+  </h2>
 
   <div class="pricing-wrapper">
     <div class="pricing-grid">
+
       <!-- BASIC -->
       <div class="pricing-card">
         <div class="pricing-name">Basic Package</div>
-        <div class="pricing-amount"><sup>₱</sup>1,459</div>
-        <div class="pricing-period">per month</div>
+
+        <div class="pricing-amount">
+          <sup>₱</sup>1,499
+        </div>
+
+        <div class="pricing-period">/month</div>
 
         <hr class="pricing-divider"/>
 
-        <ul class="pricing-list">     
-          <li>Basic 3D customization tools</li>
-          <li>Online ordering support</li>
-          <li>Simple cake preview system</li>
-          <li>Email support included</li>
+        <ul class="pricing-list">
+          <li>Basic 3D cake customization interface</li>
+          <li>Limited design elements (shape, color, basic decorations)</li>
+          <li>Standard cake templates</li>
+          <li>Online order form integration</li>
+          <li>Customer support (email/chat assistance)</li>
         </ul>
 
         <div class="pricing-card-bottom">
@@ -814,20 +822,26 @@
 
       <!-- STANDARD -->
       <div class="pricing-card featured-plan">
+
         <div class="pricing-badge">Most Popular</div>
 
         <div class="pricing-name">Standard Package</div>
-        <div class="pricing-amount"><sup>₱</sup>2,459</div>
-        <div class="pricing-period">per month</div>
+
+        <div class="pricing-amount">
+          <sup>₱</sup>2,499
+        </div>
+
+        <div class="pricing-period">/month</div>
 
         <hr class="pricing-divider"/>
 
         <ul class="pricing-list">
-          <li>Advanced customization tools</li>
-          <li>Automated pricing calculator</li>
-          <li>Design templates included</li>
-          <li>Real-time 3D preview</li>
-          <li>Priority email support</li>
+          <li>Includes all Basic features</li>
+          <li>Advanced 3D customization tools</li>
+          <li>Expanded design library (themes, toppers, decorations)</li>
+          <li>Automated price estimation</li>
+          <li>Saved design templates</li>
+          <li>Basic analytics (order tracking & sales overview)</li>
         </ul>
 
         <div class="pricing-card-bottom">
@@ -841,18 +855,23 @@
       <!-- PREMIUM -->
       <div class="pricing-card">
         <div class="pricing-name">Premium Package</div>
-        <div class="pricing-amount"><sup>₱</sup>3,959</div>
-        <div class="pricing-period">per month</div>
+
+        <div class="pricing-amount">
+          <sup>₱</sup>3,999
+        </div>
+
+        <div class="pricing-period">/month</div>
 
         <hr class="pricing-divider"/>
 
         <ul class="pricing-list">
-          <li>Full system access</li>
-          <li>Analytics dashboard</li>
-          <li>Advanced customization suite</li>
-          <li>Priority customer support</li>
-          <li>API & bakery integration support</li>
-          <li>Dedicated onboarding assistance</li>
+          <li>Includes all Standard features</li>
+          <li>Full 3D customization features</li>
+          <li>Complete analytics dashboard</li>
+          <li>Priority system support and updates</li>
+          <li>Unlimited design storage</li>
+          <li>Multi-device and mobile optimization</li>
+          <li>Early access to new features</li>
         </ul>
 
         <div class="pricing-card-bottom">
@@ -862,6 +881,7 @@
           </button>
         </div>
       </div>
+
     </div>
   </div>
 </section>

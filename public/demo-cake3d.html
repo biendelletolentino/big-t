@@ -7,6 +7,7 @@
 <link rel="icon" type="image/x-icon" href="../public/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{--black:#050508;--white:#f0ede8;--acid:#c8ff00;--orange:#ff5c1a;--dim:#111118;--dim2:#1a1a22;--muted:rgba(255,255,255,0.85);--border:rgba(200,255,0,0.12);--border2:rgba(240,237,232,0.08);}
@@ -71,6 +72,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .order-btn span{position:relative;z-index:1;}
 .clear-btn{width:100%;font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);background:transparent;padding:10px 0;border:1px solid var(--border2);cursor:none;transition:all 0.25s;}
 .clear-btn:hover{border-color:var(--orange);color:var(--orange);}
+
+/* PDF Export Button */
+.pdf-btn{width:100%;font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--acid);background:transparent;padding:10px 0;border:1px solid rgba(200,255,0,0.35);cursor:none;transition:all 0.25s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pdf-btn:hover{border-color:var(--acid);background:rgba(200,255,0,0.06);}
+.pdf-btn svg{flex-shrink:0;}
+
+/* PDF Loading overlay */
+.pdf-overlay{position:fixed;inset:0;z-index:9000;background:rgba(5,5,8,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.pdf-overlay.show{opacity:1;pointer-events:all;}
+.pdf-spinner{width:44px;height:44px;border:2px solid rgba(200,255,0,0.18);border-top-color:var(--acid);border-radius:50%;animation:spin 0.8s linear infinite;}
+.pdf-overlay-label{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.28em;color:var(--acid);text-transform:uppercase;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
 .toast{position:fixed;bottom:36px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--acid);color:var(--black);font-family:'Space Mono',monospace;font-size:0.62rem;letter-spacing:0.15em;padding:12px 28px;z-index:999;transition:transform 0.4s cubic-bezier(0.22,1,0.36,1);opacity:0;pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 </style>
@@ -79,6 +93,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
 <div class="toast" id="toast"></div>
+<div class="pdf-overlay" id="pdfOverlay">
+  <div class="pdf-spinner"></div>
+  <div class="pdf-overlay-label">Generating PDF…</div>
+</div>
 <nav>
   <div class="nav-logo">BIG T / CAKE 3D</div>
   <a href="api/index.php" class="nav-back">← Back</a>
@@ -144,6 +162,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
       <div class="price-amount" id="priceAmt">₱800</div>
     </div>
     <button class="order-btn" id="orderBtn"><span>Add to Order →</span></button>
+    <button class="pdf-btn" id="exportPdfBtn">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#c8ff00" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 10v2h10v-2"/><line x1="7" y1="1" x2="7" y2="9"/><polyline points="4,6 7,9 10,6"/>
+      </svg>
+      Export PDF
+    </button>
     <button class="clear-btn" id="clearToppingsBtn">Clear All Toppings</button>
   </div>
 </div>
@@ -493,25 +517,18 @@ const fillL=new THREE.DirectionalLight(0xc8e8ff,.55);fillL.position.set(-5,3,-4)
 const rimL=new THREE.DirectionalLight(0xc8ff00,.28);rimL.position.set(0,5,-8);scene.add(rimL);
 const candleL=new THREE.PointLight(0xff8844,.7,20);candleL.position.set(2,3,3);scene.add(candleL);
 
-// ── PLATE: positioned dynamically in buildCake(), stored here
-let plateMesh = null;
+let plateMesh=null;
 
-// Grid floor
 const grid=new THREE.GridHelper(6,20,0x1a3a1a,0x1a2a1a);grid.position.y=-2.5;scene.add(grid);
 
-// GROUPS
 const cakeGroup=new THREE.Group();scene.add(cakeGroup);
 const toppingGroup=new THREE.Group();scene.add(toppingGroup);
 let cakeMeshes=[];
 let tierInfo=[];
 
-function hexToThreeColor(hex){
-  // THREE.Color natively accepts CSS hex strings like '#ef4444'
-  return new THREE.Color(hex);
-}
+function hexToThreeColor(hex){return new THREE.Color(hex);}
 
 function buildCake(){
-  // Dispose old cake geometry/materials
   cakeGroup.traverse(obj=>{
     if(obj.isMesh){
       if(obj.geometry)obj.geometry.dispose();
@@ -522,7 +539,6 @@ function buildCake(){
   while(cakeGroup.children.length)cakeGroup.remove(cakeGroup.children[0]);
   cakeMeshes=[];tierInfo=[];
 
-  // Remove old plate from scene
   if(plateMesh){scene.remove(plateMesh);plateMesh.geometry.dispose();plateMesh.material.dispose();plateMesh=null;}
 
   const saved=placedToppings.map(p=>({id:p.id,worldPos:p.worldPos.clone(),normal:p.normal.clone()}));
@@ -532,46 +548,27 @@ function buildCake(){
   const flavorDef=FLAVORS.find(f=>f.id===state.flavorId)||FLAVORS[0];
   const baseCol=new THREE.Color(flavorDef.baseColor);
   const frostCol=hexToThreeColor(state.frostHex);
-
   const tierDefs=[{r:2.2,h:1.4},{r:1.7,h:1.2},{r:1.2,h:1.0},{r:.8,h:.8}];
 
-  // Calculate total height
   let totalHeight=0;
-  for(let i=0;i<tiers;i++){
-    const {h}=tierDefs[i];
-    totalHeight+=h+(i<tiers-1?0.14:0);
-  }
+  for(let i=0;i<tiers;i++){totalHeight+=tierDefs[i].h+(i<tiers-1?0.14:0);}
 
-  // Stack tiers from y=0 upward within the group
   let y=0;
   for(let i=0;i<tiers;i++){
     const {r,h}=tierDefs[i];
-
-    const sponge=new THREE.Mesh(
-      new THREE.CylinderGeometry(r-.04,r,h,64,4),
-      new THREE.MeshStandardMaterial({color:baseCol.clone(),roughness:.85,metalness:0})
-    );
-    sponge.position.y=y+h/2;
-    sponge.castShadow=true;sponge.receiveShadow=true;
+    const sponge=new THREE.Mesh(new THREE.CylinderGeometry(r-.04,r,h,64,4),new THREE.MeshStandardMaterial({color:baseCol.clone(),roughness:.85,metalness:0}));
+    sponge.position.y=y+h/2;sponge.castShadow=true;sponge.receiveShadow=true;
     sponge.userData={cakePart:'side',tierIdx:i,r,h,baseY:y};
     cakeGroup.add(sponge);cakeMeshes.push(sponge);
 
-    const frostTop=new THREE.Mesh(
-      new THREE.CylinderGeometry(r,r,.13,64),
-      new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:state.frostStyle==='naked'?.85:.25,metalness:0})
-    );
-    frostTop.position.y=y+h+.065;
-    frostTop.castShadow=true;
+    const frostTop=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.13,64),new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:state.frostStyle==='naked'?.85:.25,metalness:0}));
+    frostTop.position.y=y+h+.065;frostTop.castShadow=true;
     frostTop.userData={cakePart:'top',tierIdx:i,r,topSurfaceY:y+h+.13};
     cakeGroup.add(frostTop);cakeMeshes.push(frostTop);
 
-    const sideMat=new THREE.MeshStandardMaterial({
-      color:frostCol.clone(),roughness:state.frostStyle==='naked'?.9:.32,metalness:0,
-      opacity:state.frostStyle==='naked'?.32:1,transparent:state.frostStyle==='naked',side:THREE.FrontSide
-    });
+    const sideMat=new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:state.frostStyle==='naked'?.9:.32,metalness:0,opacity:state.frostStyle==='naked'?.32:1,transparent:state.frostStyle==='naked',side:THREE.FrontSide});
     const frostSide=new THREE.Mesh(new THREE.CylinderGeometry(r+.025,r+.025,h,64,1,true),sideMat);
-    frostSide.position.y=y+h/2;
-    frostSide.userData={cakePart:'side',tierIdx:i,r,h,baseY:y};
+    frostSide.position.y=y+h/2;frostSide.userData={cakePart:'side',tierIdx:i,r,h,baseY:y};
     cakeGroup.add(frostSide);cakeMeshes.push(frostSide);
 
     tierInfo.push({r,h,baseY:y,topY:y+h+.13});
@@ -579,8 +576,7 @@ function buildCake(){
     if(state.frostStyle==='ruffle'){
       for(let j=0;j<20;j++){
         const a=(j/20)*Math.PI*2;
-        const ru=new THREE.Mesh(new THREE.SphereGeometry(.095,8,8),
-          new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:.42}));
+        const ru=new THREE.Mesh(new THREE.SphereGeometry(.095,8,8),new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:.42}));
         ru.position.set(Math.cos(a)*(r+.045),y+h+.038,Math.sin(a)*(r+.045));
         cakeGroup.add(ru);
       }
@@ -592,11 +588,9 @@ function buildCake(){
         const dl=.18+Math.random()*.48;
         const dm=new THREE.MeshStandardMaterial({color:frostCol.clone(),roughness:.18});
         const drip=new THREE.Mesh(new THREE.CylinderGeometry(.038,.02,dl,8),dm);
-        drip.position.set(Math.cos(a)*r,y+h-dl/2,Math.sin(a)*r);
-        cakeGroup.add(drip);
+        drip.position.set(Math.cos(a)*r,y+h-dl/2,Math.sin(a)*r);cakeGroup.add(drip);
         const ball=new THREE.Mesh(new THREE.SphereGeometry(.042,8,8),dm);
-        ball.position.set(Math.cos(a)*r,y+h-dl,Math.sin(a)*r);
-        cakeGroup.add(ball);
+        ball.position.set(Math.cos(a)*r,y+h-dl,Math.sin(a)*r);cakeGroup.add(ball);
       }
     }
 
@@ -604,46 +598,26 @@ function buildCake(){
       const cc=Math.min(tiers+2,6);
       for(let c=0;c<cc;c++){
         const a=(c/cc)*Math.PI*2,cr=r*.55;
-        const candle=new THREE.Mesh(
-          new THREE.CylinderGeometry(.055,.055,.52,12),
-          new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(c/cc,.85,.68),roughness:.5})
-        );
-        candle.position.set(Math.cos(a)*cr,y+h+.26+.13,Math.sin(a)*cr);
-        cakeGroup.add(candle);
-        const flame=new THREE.Mesh(
-          new THREE.SphereGeometry(.06,8,8),
-          new THREE.MeshStandardMaterial({color:0xff9900,emissive:0xff5500,emissiveIntensity:1.9,roughness:.18})
-        );
-        flame.scale.set(.68,1.25,.68);
-        flame.position.set(Math.cos(a)*cr,y+h+.62+.13,Math.sin(a)*cr);
-        cakeGroup.add(flame);
+        const candle=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.52,12),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(c/cc,.85,.68),roughness:.5}));
+        candle.position.set(Math.cos(a)*cr,y+h+.26+.13,Math.sin(a)*cr);cakeGroup.add(candle);
+        const flame=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),new THREE.MeshStandardMaterial({color:0xff9900,emissive:0xff5500,emissiveIntensity:1.9,roughness:.18}));
+        flame.scale.set(.68,1.25,.68);flame.position.set(Math.cos(a)*cr,y+h+.62+.13,Math.sin(a)*cr);cakeGroup.add(flame);
       }
     }
     y+=h+.14;
   }
 
-  // Center the cake group vertically
-  const groupOffset = -totalHeight/2;
-  cakeGroup.position.y = groupOffset;
+  const groupOffset=-totalHeight/2;
+  cakeGroup.position.y=groupOffset;
 
-  // Place plate just below the bottom of the cake in world space
-  const plateWorldY = groupOffset - 0.08;
-  const bottomTierR = tierDefs[0].r;
-  plateMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(bottomTierR + 0.6, bottomTierR + 0.6, 0.12, 64),
-    new THREE.MeshStandardMaterial({color:0x1a1a2e, roughness:.2, metalness:.8})
-  );
-  plateMesh.position.y = plateWorldY;
-  plateMesh.receiveShadow = true;
-  scene.add(plateMesh);
+  const plateWorldY=groupOffset-0.08;
+  const bottomTierR=tierDefs[0].r;
+  plateMesh=new THREE.Mesh(new THREE.CylinderGeometry(bottomTierR+0.6,bottomTierR+0.6,0.12,64),new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:.2,metalness:.8}));
+  plateMesh.position.y=plateWorldY;plateMesh.receiveShadow=true;scene.add(plateMesh);
+  grid.position.y=plateWorldY-0.07;
 
-  // Also reposition the grid to sit just below the plate
-  grid.position.y = plateWorldY - 0.07;
-
-  // Restore saved toppings
   saved.forEach(pt=>{
-    const def=TOPPINGS.find(x=>x.id===pt.id);
-    if(!def)return;
+    const def=TOPPINGS.find(x=>x.id===pt.id);if(!def)return;
     const top=tierInfo[tierInfo.length-1];
     const worldTopY=top.topY+cakeGroup.position.y;
     const pos=new THREE.Vector3(pt.worldPos.x,worldTopY,pt.worldPos.z);
@@ -652,41 +626,28 @@ function buildCake(){
     if(dist>maxR){pos.x*=maxR/dist;pos.z*=maxR/dist;}
     _addToppingMesh(def,pos,pt.normal);
   });
-
   updatePrice();
 }
 
-// ── TOPPING MESH MANAGEMENT
 function _addToppingMesh(def,worldPos,normal){
   const mesh=def.build();
   mesh.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;}});
   mesh.position.copy(worldPos);
-
   const isTop=!normal||normal.y>0.7;
-  if(isTop){
-    mesh.position.y+=.14;
-  }else{
+  if(isTop){mesh.position.y+=.14;}
+  else{
     const angle=Math.atan2(normal.x,normal.z);
-    mesh.rotation.y=angle;
-    mesh.rotation.x=Math.PI*.18;
-    mesh.position.x+=normal.x*.05;
-    mesh.position.z+=normal.z*.05;
-    mesh.position.y+=.08;
+    mesh.rotation.y=angle;mesh.rotation.x=Math.PI*.18;
+    mesh.position.x+=normal.x*.05;mesh.position.z+=normal.z*.05;mesh.position.y+=.08;
   }
-
   const ringGeo=new THREE.RingGeometry(.12,.18,24);
   const ringMat=new THREE.MeshBasicMaterial({color:0xc8ff00,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});
   const ring=new THREE.Mesh(ringGeo,ringMat);
-  ring.rotation.x=-Math.PI/2;
-  ring.position.set(worldPos.x,worldPos.y+.01,worldPos.z);
-  toppingGroup.add(ring);
-  toppingGroup.add(mesh);
-
+  ring.rotation.x=-Math.PI/2;ring.position.set(worldPos.x,worldPos.y+.01,worldPos.z);
+  toppingGroup.add(ring);toppingGroup.add(mesh);
   const entry={id:def.id,mesh,ring,worldPos:worldPos.clone(),normal:(normal||new THREE.Vector3(0,1,0)).clone()};
   mesh.traverse(c=>{if(c.isMesh)c.userData.toppingEntry=entry;});
-  placedToppings.push(entry);
-  updatePrice();
-
+  placedToppings.push(entry);updatePrice();
   mesh.scale.setScalar(.01);ring.scale.setScalar(.01);
   let t2=0;
   (function pop(){t2+=.13;const sc=t2<1?t2*t2*(3-2*t2):1;
@@ -697,9 +658,7 @@ function _addToppingMesh(def,worldPos,normal){
 }
 
 function _clearToppingMeshesOnly(){
-  placedToppings.forEach(e=>{
-    toppingGroup.remove(e.mesh);toppingGroup.remove(e.ring);
-  });
+  placedToppings.forEach(e=>{toppingGroup.remove(e.mesh);toppingGroup.remove(e.ring);});
   while(toppingGroup.children.length)toppingGroup.remove(toppingGroup.children[0]);
   placedToppings=[];
 }
@@ -716,25 +675,9 @@ buildCake();
 // ── RAYCASTER
 const raycaster=new THREE.Raycaster();
 const mouseVec=new THREE.Vector2();
-
-function setNDC(cx,cy){
-  const rect=vpEl.getBoundingClientRect();
-  mouseVec.x=((cx-rect.left)/rect.width)*2-1;
-  mouseVec.y=-((cy-rect.top)/rect.height)*2+1;
-}
-function raycastCake(cx,cy){
-  setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);
-  const hits=raycaster.intersectObjects(cakeMeshes,false);
-  if(!hits.length)return null;
-  return hits.find(h=>h.object.userData.cakePart==='top')||hits[0];
-}
-function raycastToppings(cx,cy){
-  setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);
-  const meshes=[];
-  placedToppings.forEach(e=>e.mesh.traverse(c=>{if(c.isMesh)meshes.push(c);}));
-  const hits=raycaster.intersectObjects(meshes,false);
-  return hits.length?hits[0]:null;
-}
+function setNDC(cx,cy){const rect=vpEl.getBoundingClientRect();mouseVec.x=((cx-rect.left)/rect.width)*2-1;mouseVec.y=-((cy-rect.top)/rect.height)*2+1;}
+function raycastCake(cx,cy){setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);const hits=raycaster.intersectObjects(cakeMeshes,false);if(!hits.length)return null;return hits.find(h=>h.object.userData.cakePart==='top')||hits[0];}
+function raycastToppings(cx,cy){setNDC(cx,cy);raycaster.setFromCamera(mouseVec,camera);const meshes=[];placedToppings.forEach(e=>e.mesh.traverse(c=>{if(c.isMesh)meshes.push(c);}));const hits=raycaster.intersectObjects(meshes,false);return hits.length?hits[0]:null;}
 
 // ── CAMERA ORBIT
 let isAutoRotating=true;
@@ -755,138 +698,381 @@ mainCanvas.addEventListener('mousemove',e=>{
   if(dragTopping){
     const hit=raycastCake(e.clientX,e.clientY);
     const ind=document.getElementById('dropIndicator');
-    if(hit){
-      const rect=vpEl.getBoundingClientRect();
-      const v=hit.point.clone().project(camera);
-      ind.style.left=((v.x*.5+.5)*rect.width)+'px';
-      ind.style.top=((-v.y*.5+.5)*rect.height)+'px';
-      ind.style.display='block';
-    }else ind.style.display='none';
-    return;
+    if(hit){const rect=vpEl.getBoundingClientRect();const v=hit.point.clone().project(camera);ind.style.left=((v.x*.5+.5)*rect.width)+'px';ind.style.top=((-v.y*.5+.5)*rect.height)+'px';ind.style.display='block';}
+    else ind.style.display='none';return;
   }
   const hit=raycastToppings(e.clientX,e.clientY);
-  if(hit){
-    const entry=hit.object.userData.toppingEntry;
-    if(entry&&entry!==hoveredEntry){
-      if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);}
-      hoveredEntry=entry;entry.ring.material.opacity=.6;entry.mesh.scale.setScalar(1.18);
-    }
-  }else{
-    if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);hoveredEntry=null;}
-  }
+  if(hit){const entry=hit.object.userData.toppingEntry;if(entry&&entry!==hoveredEntry){if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);}hoveredEntry=entry;entry.ring.material.opacity=.6;entry.mesh.scale.setScalar(1.18);}}
+  else{if(hoveredEntry){hoveredEntry.ring.material.opacity=.16;hoveredEntry.mesh.scale.setScalar(1);hoveredEntry=null;}}
 });
 
 mainCanvas.addEventListener('mousedown',e=>{
   if(e.button===0&&!dragTopping){
     const hit=raycastToppings(e.clientX,e.clientY);
-    if(hit&&hit.object.userData.toppingEntry){
-      removeToppingEntry(hit.object.userData.toppingEntry);
-      hoveredEntry=null;showToast('Topping removed ✕');return;
-    }
-    mouseDown=true;isAutoRotating=false;
-    document.getElementById('autoRotBtn').textContent='Auto Rotate: OFF';
+    if(hit&&hit.object.userData.toppingEntry){removeToppingEntry(hit.object.userData.toppingEntry);hoveredEntry=null;showToast('Topping removed ✕');return;}
+    mouseDown=true;isAutoRotating=false;document.getElementById('autoRotBtn').textContent='Auto Rotate: OFF';
   }
   if(e.button===2)rightDown=true;
   lastMX=e.clientX;lastMY=e.clientY;
 });
 window.addEventListener('mouseup',()=>{mouseDown=false;rightDown=false;});
 window.addEventListener('mousemove',e=>{
-  if(mouseDown&&!dragTopping){
-    camTheta-=(e.clientX-lastMX)*.008;
-    camPhi=Math.max(.1,Math.min(Math.PI/2,camPhi+(e.clientY-lastMY)*.006));
-    updateCamera();
-  }
-  if(rightDown){
-    camTarget.x-=(e.clientX-lastMX)*.01;camTarget.y+=(e.clientY-lastMY)*.01;updateCamera();
-  }
+  if(mouseDown&&!dragTopping){camTheta-=(e.clientX-lastMX)*.008;camPhi=Math.max(.1,Math.min(Math.PI/2,camPhi+(e.clientY-lastMY)*.006));updateCamera();}
+  if(rightDown){camTarget.x-=(e.clientX-lastMX)*.01;camTarget.y+=(e.clientY-lastMY)*.01;updateCamera();}
   lastMX=e.clientX;lastMY=e.clientY;
 });
-mainCanvas.addEventListener('wheel',e=>{
-  e.preventDefault();camRadius=Math.max(3,Math.min(22,camRadius+e.deltaY*.015));updateCamera();
-},{passive:false});
+mainCanvas.addEventListener('wheel',e=>{e.preventDefault();camRadius=Math.max(3,Math.min(22,camRadius+e.deltaY*.015));updateCamera();},{passive:false});
 mainCanvas.addEventListener('contextmenu',e=>e.preventDefault());
 
 // ── DRAG & DROP
 document.addEventListener('dragover',e=>e.preventDefault());
-document.addEventListener('dragend',()=>{
-  document.getElementById('dropZone').classList.remove('active');
-  document.getElementById('dropIndicator').style.display='none';
-  dragTopping=null;
-});
+document.addEventListener('dragend',()=>{document.getElementById('dropZone').classList.remove('active');document.getElementById('dropIndicator').style.display='none';dragTopping=null;});
 vpEl.addEventListener('dragover',e=>e.preventDefault());
 vpEl.addEventListener('drop',e=>{
   e.preventDefault();
-  document.getElementById('dropZone').classList.remove('active');
-  document.getElementById('dropIndicator').style.display='none';
+  document.getElementById('dropZone').classList.remove('active');document.getElementById('dropIndicator').style.display='none';
   if(!dragTopping)return;
   const hit=raycastCake(e.clientX,e.clientY);
   if(hit){
     const pos=hit.point.clone();
     const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     if(hit.object.userData.cakePart==='top'){
-      const topY=hit.object.userData.topSurfaceY!==undefined
-        ? hit.object.userData.topSurfaceY+cakeGroup.position.y
-        : hit.object.position.y+cakeGroup.position.y+.065;
+      const topY=hit.object.userData.topSurfaceY!==undefined?hit.object.userData.topSurfaceY+cakeGroup.position.y:hit.object.position.y+cakeGroup.position.y+.065;
       pos.y=topY;
-      const dist=Math.sqrt(pos.x*pos.x+pos.z*pos.z);
-      const maxR=(hit.object.userData.r||2)*.86;
+      const dist=Math.sqrt(pos.x*pos.x+pos.z*pos.z);const maxR=(hit.object.userData.r||2)*.86;
       if(dist>maxR){pos.x*=maxR/dist;pos.z*=maxR/dist;}
       _addToppingMesh(dragTopping,pos,new THREE.Vector3(0,1,0));
-    }else{
-      pos.addScaledVector(normal,.06);
-      _addToppingMesh(dragTopping,pos,normal);
-    }
+    }else{pos.addScaledVector(normal,.06);_addToppingMesh(dragTopping,pos,normal);}
     showToast(dragTopping.name+' placed on cake!');
-  }else{
-    showToast('Drop directly on the cake 🎂');
-  }
+  }else{showToast('Drop directly on the cake 🎂');}
   dragTopping=null;
 });
 
 // ── UI BUTTONS
 document.querySelectorAll('.tier-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.tier-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');state.tiers=parseInt(b.dataset.t);buildCake();
-  });
+  b.addEventListener('click',()=>{document.querySelectorAll('.tier-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.tiers=parseInt(b.dataset.t);buildCake();});
 });
 document.querySelectorAll('.frost-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.frost-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');state.frostStyle=b.dataset.f;buildCake();
-  });
+  b.addEventListener('click',()=>{document.querySelectorAll('.frost-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.frostStyle=b.dataset.f;buildCake();});
 });
-document.getElementById('resetCamBtn').addEventListener('click',()=>{
-  camTheta=0;camPhi=Math.PI/4;camRadius=10;camTarget.set(0,0,0);updateCamera();
-});
-document.getElementById('autoRotBtn').addEventListener('click',()=>{
-  isAutoRotating=!isAutoRotating;
-  document.getElementById('autoRotBtn').textContent='Auto Rotate: '+(isAutoRotating?'ON':'OFF');
-});
+document.getElementById('resetCamBtn').addEventListener('click',()=>{camTheta=0;camPhi=Math.PI/4;camRadius=10;camTarget.set(0,0,0);updateCamera();});
+document.getElementById('autoRotBtn').addEventListener('click',()=>{isAutoRotating=!isAutoRotating;document.getElementById('autoRotBtn').textContent='Auto Rotate: '+(isAutoRotating?'ON':'OFF');});
 document.getElementById('snapBtn').addEventListener('click',()=>{
   renderer.render(scene,camera);
   const url=renderer.domElement.toDataURL('image/png');
   const a=document.createElement('a');a.href=url;a.download='my-cake.png';a.click();
   showToast('📸 Snapshot saved!');
 });
-document.getElementById('clearToppingsBtn').addEventListener('click',()=>{
-  _clearToppingMeshesOnly();updatePrice();showToast('All toppings cleared');
-});
-document.getElementById('orderBtn').addEventListener('click',()=>{
-  showToast('🎂 Order placed! ₱'+totalPrice.toLocaleString());
-});
+document.getElementById('clearToppingsBtn').addEventListener('click',()=>{_clearToppingMeshesOnly();updatePrice();showToast('All toppings cleared');});
+document.getElementById('orderBtn').addEventListener('click',()=>{showToast('🎂 Order placed! ₱'+totalPrice.toLocaleString());});
+
+// ─────────────────────────────────────────────
+// PDF EXPORT
+// ─────────────────────────────────────────────
+document.getElementById('exportPdfBtn').addEventListener('click', exportPDF);
+
+async function exportPDF(){
+  const overlay=document.getElementById('pdfOverlay');
+  overlay.classList.add('show');
+
+  // Pause auto rotation and render a clean frame
+  const wasRotating=isAutoRotating;
+  isAutoRotating=false;
+
+  // Wait one frame so rendering is settled
+  await new Promise(r=>setTimeout(r,120));
+
+  renderer.render(scene,camera);
+  const cakeImgData=renderer.domElement.toDataURL('image/jpeg',0.92);
+
+  // Build PDF
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+  const PW=210; // A4 width mm
+  const PH=297; // A4 height mm
+  const MARGIN=16;
+  const COL=PW-MARGIN*2;
+
+  // ── Palette / helpers
+  const BG='#050508';
+  const ACID='#c8ff00';
+  const WHITE='#f0ede8';
+  const DIM='#111118';
+  const DIM2='#1a1a22';
+  const MUTED='#9b9a97';
+  const ORANGE='#ff5c1a';
+
+  function fillRect(x,y,w,h,col){doc.setFillColor(col);doc.rect(x,y,w,h,'F');}
+  function strokeRect(x,y,w,h,col,lw=0.3){doc.setDrawColor(col);doc.setLineWidth(lw);doc.rect(x,y,w,h,'S');}
+  function hRule(y,col=DIM2,lw=0.2){doc.setDrawColor(col);doc.setLineWidth(lw);doc.line(MARGIN,y,PW-MARGIN,y);}
+
+  // ─ Background
+  fillRect(0,0,PW,PH,BG);
+
+  // ─ Header strip
+  fillRect(0,0,PW,34,DIM2);
+  strokeRect(0,32,PW,2,ACID,1);
+
+  // Logo / brand
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(22);
+  doc.setTextColor(ACID);
+  doc.text('BIG T',MARGIN,21);
+
+  doc.setFont('courier','normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(MUTED);
+  doc.text('/ CAKE DESIGN STUDIO',MARGIN+18,21);
+
+  // Document title (right-aligned)
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.setTextColor(WHITE);
+  doc.text('CAKE ORDER SPECIFICATION',PW-MARGIN,21,{align:'right'});
+
+  // Date / ref
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+  const timeStr=now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+  const refNo='BT-'+Math.floor(Math.random()*90000+10000);
+  doc.setFont('courier','normal');
+  doc.setFontSize(6);
+  doc.setTextColor(MUTED);
+  doc.text('DATE: '+dateStr+' '+timeStr,PW-MARGIN,27,{align:'right'});
+  doc.text('REF: '+refNo,PW-MARGIN,31,{align:'right'});
+
+  let curY=42;
+
+  // ─ Cake Image + Specs side-by-side
+  const imgW=90;
+  const imgH=90;
+  const imgX=MARGIN;
+  const imgY=curY;
+
+  // Image frame
+  fillRect(imgX-1,imgY-1,imgW+2,imgH+2,DIM2);
+  strokeRect(imgX-1,imgY-1,imgW+2,imgH+2,ACID,0.4);
+  doc.addImage(cakeImgData,'JPEG',imgX,imgY,imgW,imgH);
+
+  // Corner accent lines (top-left)
+  doc.setDrawColor(ACID);doc.setLineWidth(0.8);
+  doc.line(imgX-1,imgY-1,imgX+7,imgY-1);
+  doc.line(imgX-1,imgY-1,imgX-1,imgY+7);
+  // Bottom-right
+  doc.line(imgX+imgW-6,imgY+imgH+1,imgX+imgW+1,imgY+imgH+1);
+  doc.line(imgX+imgW+1,imgY+imgH-6,imgX+imgW+1,imgY+imgH+1);
+
+  // Specs panel (right of image)
+  const specX=imgX+imgW+8;
+  const specW=COL-imgW-8;
+
+  // Section title
+  doc.setFont('courier','bold');
+  doc.setFontSize(7);
+  doc.setTextColor(ACID);
+  doc.text('// DESIGN SPECIFICATIONS',specX,imgY+6);
+
+  const specs=[
+    ['TIERS',state.tiers+' tier'+(state.tiers>1?'s':'')],
+    ['FLAVOR',(FLAVORS.find(f=>f.id===state.flavorId)||FLAVORS[0]).name],
+    ['FROSTING COLOR',FROST_COLORS.find(c=>c.hex===state.frostHex)?.name||state.frostHex],
+    ['FROSTING STYLE',state.frostStyle.charAt(0).toUpperCase()+state.frostStyle.slice(1)],
+    ['TOPPINGS',placedToppings.length+' item'+(placedToppings.length!==1?'s':'')],
+  ];
+
+  let sy=imgY+12;
+  specs.forEach(([label,val],i)=>{
+    const rowH=13;
+    fillRect(specX,sy,specW,rowH,i%2===0?DIM:DIM2);
+    strokeRect(specX,sy,specW,rowH,DIM2,0.15);
+
+    doc.setFont('courier','normal');
+    doc.setFontSize(6);
+    doc.setTextColor(MUTED);
+    doc.text(label,specX+4,sy+5);
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.setTextColor(WHITE);
+    doc.text(val,specX+4,sy+10.5);
+
+    sy+=rowH;
+  });
+
+  // Price box
+  const priceBoxY=sy+4;
+  fillRect(specX,priceBoxY,specW,22,DIM2);
+  strokeRect(specX,priceBoxY,specW,22,ACID,0.5);
+  // Acid left bar
+  fillRect(specX,priceBoxY,2,22,ACID);
+
+  doc.setFont('courier','normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(ACID);
+  doc.text('TOTAL ESTIMATE',specX+6,priceBoxY+7);
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(22);
+  doc.setTextColor(ACID);
+  doc.text('PHP '+totalPrice.toLocaleString(),specX+6,priceBoxY+18);
+
+  curY=imgY+imgH+10;
+
+  // ─ Toppings Breakdown
+  if(placedToppings.length>0){
+    // Section header
+    fillRect(MARGIN,curY,COL,8,DIM2);
+    strokeRect(MARGIN,curY,COL,8,ACID,0.25);
+    fillRect(MARGIN,curY,3,8,ACID);
+
+    doc.setFont('courier','bold');
+    doc.setFontSize(7);
+    doc.setTextColor(ACID);
+    doc.text('// TOPPINGS BREAKDOWN',MARGIN+7,curY+5.5);
+    curY+=10;
+
+    // Count per topping type
+    const counts={};
+    placedToppings.forEach(pt=>{counts[pt.id]=(counts[pt.id]||0)+1;});
+
+    const entries=Object.entries(counts);
+    const colW=COL/2;
+    let col=0;
+    let rowStart=curY;
+
+    entries.forEach(([id,count],idx)=>{
+      const def=TOPPINGS.find(t=>t.id===id);
+      if(!def)return;
+      const cx=MARGIN+(col*colW);
+      const rowH=11;
+
+      fillRect(cx,rowStart,colW-2,rowH,idx%2===0?DIM:DIM2);
+      strokeRect(cx,rowStart,colW-2,rowH,DIM2,0.1);
+
+      // Bullet
+      doc.setFillColor(ACID);
+      doc.circle(cx+5,rowStart+5.5,1.2,'F');
+
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8);
+      doc.setTextColor(WHITE);
+      doc.text(def.name,cx+10,rowStart+6.5);
+
+      doc.setFont('courier','normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(MUTED);
+      doc.text('x'+count,cx+colW-18,rowStart+6.5);
+
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(ACID);
+      doc.text('PHP '+(def.price*count).toLocaleString(),cx+colW-8,rowStart+6.5,{align:'right'});
+
+      col++;
+      if(col>=2){col=0;rowStart+=rowH;}
+    });
+
+    if(col>0)rowStart+=11;
+    curY=rowStart+4;
+  }
+
+  // ─ Pricing Breakdown table
+  const flavorDef=FLAVORS.find(f=>f.id===state.flavorId)||FLAVORS[0];
+  const flavorExtra=PRICES.flavor[state.flavorId]||0;
+  const toppingTotal=placedToppings.reduce((s,pt)=>{const d=TOPPINGS.find(x=>x.id===pt.id);return s+(d?d.price:0);},0);
+  const basePrice=PRICES.tiers[state.tiers];
+
+  const breakdownRows=[
+    ['Base cake ('+state.tiers+' tier'+(state.tiers>1?'s':'')+')',basePrice],
+    ['Flavor premium — '+flavorDef.name,flavorExtra],
+    ['Toppings ('+placedToppings.length+' items)',toppingTotal],
+  ];
+
+  fillRect(MARGIN,curY,COL,8,DIM2);
+  strokeRect(MARGIN,curY,COL,8,ACID,0.25);
+  fillRect(MARGIN,curY,3,8,ACID);
+  doc.setFont('courier','bold');doc.setFontSize(7);doc.setTextColor(ACID);
+  doc.text('// PRICE BREAKDOWN',MARGIN+7,curY+5.5);
+  curY+=10;
+
+  breakdownRows.forEach(([label,amt],i)=>{
+    const rh=11;
+    fillRect(MARGIN,curY,COL,rh,i%2===0?DIM:DIM2);
+    strokeRect(MARGIN,curY,COL,rh,DIM2,0.1);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(WHITE);
+    doc.text(label,MARGIN+6,curY+7);
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(amt>0?WHITE:MUTED);
+    doc.text(amt>0?'PHP '+amt.toLocaleString():'Included',PW-MARGIN-4,curY+7,{align:'right'});
+    curY+=rh;
+  });
+
+  // Total row
+  fillRect(MARGIN,curY,COL,14,ACID);
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor('#050508');
+  doc.text('TOTAL ESTIMATE',MARGIN+6,curY+9.5);
+  doc.setFontSize(13);
+  doc.text('PHP '+totalPrice.toLocaleString(),PW-MARGIN-4,curY+9.5,{align:'right'});
+  curY+=18;
+
+  // ─ Notes / Terms box
+  const notesH=28;
+  if(curY+notesH<PH-30){
+    fillRect(MARGIN,curY,COL,notesH,DIM2);
+    strokeRect(MARGIN,curY,COL,notesH,DIM2,0.2);
+    strokeRect(MARGIN,curY,3,notesH,ORANGE,0.5);
+    fillRect(MARGIN,curY,3,notesH,ORANGE);
+
+    doc.setFont('courier','bold');doc.setFontSize(6.5);doc.setTextColor(ORANGE);
+    doc.text('// NOTES & TERMS',MARGIN+7,curY+6);
+
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(MUTED);
+    const notes=[
+      '• Pricing is an estimate only. Final pricing confirmed upon order placement.',
+      '• A 50% deposit is required to confirm and begin production of your order.',
+      '• Lead time: 3–5 business days from deposit receipt. Rush orders subject to availability.',
+      '• Design changes after deposit may incur additional charges.',
+    ];
+    notes.forEach((n,i)=>{doc.text(n,MARGIN+7,curY+12+(i*4.5));});
+    curY+=notesH+6;
+  }
+
+  // ─ Footer strip
+  fillRect(0,PH-18,PW,18,DIM2);
+  doc.setDrawColor(ACID);doc.setLineWidth(0.4);doc.line(0,PH-18,PW,PH-18);
+
+  doc.setFont('courier','normal');doc.setFontSize(6);doc.setTextColor(MUTED);
+  doc.text('BIG T Cake Design Studio — big.t.technologies.ai@gmail.com — Las Piñas, Metro Manila, PH',MARGIN,PH-10);
+  doc.text('Page 1 of 1  •  Ref: '+refNo,PW-MARGIN,PH-10,{align:'right'});
+
+  // Barcode-style decorative strip
+  let bx=MARGIN;
+  for(let i=0;i<80;i++){
+    const w=Math.random()*1.2+0.3;
+    if(Math.random()>0.4){doc.setFillColor(ACID);doc.rect(bx,PH-5,w,2,'F');}
+    bx+=w+Math.random()*1.5+0.2;
+    if(bx>PW-MARGIN)break;
+  }
+
+  // Open in new tab (view only, no auto-download)
+  const filename='BIG-T-Cake-Design-'+refNo+'.pdf';
+  const pdfBlob=doc.output('blob');
+  const blobUrl=URL.createObjectURL(pdfBlob);
+  window.open(blobUrl,'_blank');
+
+  overlay.classList.remove('show');
+  isAutoRotating=wasRotating;
+  showToast('PDF opened in new tab!');
+}
 
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove('show'),2500);
+  clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove('show'),2800);
 }
 
 // ── RESIZE
-function resize(){
-  const w=vpEl.clientWidth,h=vpEl.clientHeight;
-  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
-}
+function resize(){const w=vpEl.clientWidth,h=vpEl.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 window.addEventListener('resize',resize);resize();
 
 // ── RENDER LOOP
@@ -896,10 +1082,7 @@ const clock=new THREE.Clock();
   const dt=clock.getDelta(),t=clock.getElapsedTime();
   if(isAutoRotating)camTheta+=dt*.30;
   candleL.intensity=.55+.22*Math.sin(t*8.1)*Math.cos(t*5.2);
-  placedToppings.forEach((e,i)=>{
-    if(e.normal&&e.normal.y>.7)
-      e.mesh.position.y=e.worldPos.y+.14+Math.sin(t*1.3+i*1.07)*.013;
-  });
+  placedToppings.forEach((e,i)=>{if(e.normal&&e.normal.y>.7)e.mesh.position.y=e.worldPos.y+.14+Math.sin(t*1.3+i*1.07)*.013;});
   updateCamera();
   renderer.render(scene,camera);
 })();
