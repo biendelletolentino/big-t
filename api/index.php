@@ -1036,7 +1036,7 @@ $members = [
     <a href="#">Terms</a>
     <a href="#">Status</a>
   </div>
-  <div class="footer-copy">© 2025 BIG T. All rights reserved.</div>
+  <div class="footer-copy">© 2026 BIG T. All rights reserved.</div>
 </footer>
 
 <script>
